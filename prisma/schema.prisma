@@ -1,0 +1,45 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+
+model Workspace {
+  id           String      @id @default(uuid())
+  name         String
+  description  String?
+  data         Json
+  thumbnailUrl String?
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+  userId       String
+
+  @@index([userId])
+}
+
+enum LibraryType {
+  FONT
+  BRUSH
+  TEMPLATE
+  ICON
+}
+
+model Library {
+  id           String      @id @default(uuid())
+  name         String
+  description  String?
+  type         LibraryType
+  data         Json
+  url          String?
+  thumbnailUrl String?
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+  userId       String
+
+  @@index([userId])
+  @@index([type])
+}

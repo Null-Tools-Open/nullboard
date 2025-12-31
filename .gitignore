@@ -1,0 +1,12 @@
+node_modules
+.next
+data
+nixtold
+.env
+/src/app/api
+package-lock.json
+tsconfig.tsbuildinfo
+.next
+prisma/migrations
+.DS_Store
+.vscode
