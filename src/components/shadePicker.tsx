@@ -225,29 +225,24 @@ export function ShadePicker({ value, onChange, allowTransparent = false, positio
       {isOpen && (
         <div
           className={cn(
-            'absolute z-50 rounded-lg shadow-2xl bg-white',
+            'absolute z-50 rounded-lg shadow-2xl bg-white dark:bg-zinc-800',
             position === 'left' ? 'left-full top-0 ml-8' : 'right-full top-0 mr-8'
           )}
           style={{ width: '200px' }}
         >
           <div
-            className="bg-white p-4 rounded-lg relative"
+            className="bg-white dark:bg-zinc-800 p-4 rounded-lg relative"
           >
             <div
-              className="absolute left-0 pointer-events-none"
+              className="absolute left-0 pointer-events-none w-0 h-0 border-t-[6px] border-t-transparent border-b-[6px] border-b-transparent border-r-[8px] border-r-white dark:border-r-zinc-800"
               style={{
-                width: '0',
-                height: '0',
-                borderTop: '6px solid transparent',
-                borderBottom: '6px solid transparent',
-                borderRight: '8px solid white',
                 transform: 'translateX(-100%)',
                 top: '16px',
                 zIndex: 1
               }}
             />
             <div className="mb-3">
-              <h4 className="text-[11px] text-gray-500 mb-2 font-normal">Colors</h4>
+              <h4 className="text-[11px] text-gray-500 dark:text-zinc-400 mb-2 font-normal">Colors</h4>
               <div className="grid grid-cols-6 gap-1">
                 {colorPalette.map((item, index) => (
                   <button
@@ -257,7 +252,7 @@ export function ShadePicker({ value, onChange, allowTransparent = false, positio
                       'w-7 h-7 rounded border transition-all flex items-center justify-center text-[10px] font-medium',
                       (currentColor === item.color || (currentColor === null && item.color === 'transparent'))
                         ? 'border-blue-500 border-2'
-                        : 'border-gray-300 hover:border-gray-400'
+                        : 'border-gray-300 hover:border-gray-400 dark:border-zinc-600 dark:hover:border-zinc-500'
                     )}
                     style={
                       item.color === 'transparent'
@@ -288,7 +283,7 @@ export function ShadePicker({ value, onChange, allowTransparent = false, positio
             </div>
 
             <div className="mb-3">
-              <h4 className="text-[11px] text-gray-500 mb-2 font-normal">Shades</h4>
+              <h4 className="text-[11px] text-gray-500 dark:text-zinc-400 mb-2 font-normal">Shades</h4>
               {hasShades ? (
                 <div className="flex gap-1">
                   {shades.map((shade) => (
@@ -299,21 +294,21 @@ export function ShadePicker({ value, onChange, allowTransparent = false, positio
                         'w-7 h-7 rounded border transition-all',
                         currentColor === shade
                           ? 'border-blue-500 border-2'
-                          : 'border-gray-300 hover:border-gray-400'
+                          : 'border-gray-300 hover:border-gray-400 dark:border-zinc-600 dark:hover:border-zinc-500'
                       )}
                       style={{ backgroundColor: shade }}
                     />
                   ))}
                 </div>
               ) : (
-                <p className="text-[11px] text-gray-400">No shades available for this color</p>
+                <p className="text-[11px] text-gray-400 dark:text-zinc-500">No shades available for this color</p>
               )}
             </div>
 
             <div>
-              <h4 className="text-[11px] text-gray-500 mb-2 font-normal">HEX Code</h4>
+              <h4 className="text-[11px] text-gray-500 dark:text-zinc-400 mb-2 font-normal">HEX Code</h4>
               <div className="relative">
-                <div className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-600 text-[11px] pointer-events-none">
+                <div className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-600 dark:text-zinc-400 text-[11px] pointer-events-none">
                   #
                 </div>
                 <input
@@ -358,14 +353,13 @@ export function ShadePicker({ value, onChange, allowTransparent = false, positio
                   onFocus={() => {
                     setIsEditingHex(true)
                   }}
-                  className="w-full pl-6 pr-8 py-1.5 text-[11px] border border-gray-300 rounded focus:outline-none focus:border-gray-400 text-gray-900"
+                  className="w-full pl-6 pr-8 py-1.5 text-[11px] border border-gray-300 dark:border-zinc-600 rounded focus:outline-none focus:border-gray-400 dark:focus:border-zinc-500 text-gray-900 dark:text-zinc-100 bg-white dark:bg-zinc-700"
                   placeholder="000000"
-                  style={{ color: '#000000', backgroundColor: '#ffffff' }}
                 />
-                <div className="absolute right-8 top-1/2 -translate-y-1/2 w-px h-4 bg-gray-300 pointer-events-none" />
+                <div className="absolute right-8 top-1/2 -translate-y-1/2 w-px h-4 bg-gray-300 dark:bg-zinc-600 pointer-events-none" />
                 <button
                   onClick={() => setIsEditingHex(!isEditingHex)}
-                  className="absolute right-1 top-1/2 -translate-y-1/2 p-1.5 text-gray-500 hover:text-gray-700 transition-colors"
+                  className="absolute right-1 top-1/2 -translate-y-1/2 p-1.5 text-gray-500 hover:text-gray-700 dark:text-zinc-400 dark:hover:text-zinc-200 transition-colors"
                 >
                   <Pencil className="w-3.5 h-3.5" />
                 </button>

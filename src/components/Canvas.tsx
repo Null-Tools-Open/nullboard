@@ -39,7 +39,8 @@ import { FindOnCanvas } from './sidebar/FindOnCanvas'
 import { WorkspacesSidebar } from './sidebar/Workspaces'
 import { useWorkspaces } from '@/hooks/useWorkspaces'
 import { DebuggerOverlay } from './debugger/overlay/basic'
-
+import { DropImport } from './prompts/DropImport'
+import { useAuth } from '@/hooks/useAuth'
 
 export function Canvas() {
   const laserCanvasRef = useRef<HTMLCanvasElement>(null)
@@ -50,6 +51,9 @@ export function Canvas() {
   const isZoomingRef = useRef(false)
   const { positions, updatePositions: updateUIPositions } = useUIPosition()
   const { resolvedTheme, setTheme, canvasColor } = useTheme()
+  const { user } = useAuth()
+  const [isDropImportOpen, setIsDropImportOpen] = useState(false)
+
   const {
     workspaces,
     activeWorkspaceId,
@@ -131,6 +135,77 @@ export function Canvas() {
 
   const [isLayoutEditing, setIsLayoutEditing] = useState(false)
   const [dragSnapPreview, setDragSnapPreview] = useState<{ type: 'menu' | 'toolbar' | 'zoom', position: string | null } | null>(null)
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+  }
+
+  const handleDrop = async (e: React.DragEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+
+    const files = e.dataTransfer.files
+
+    if (files && files.length > 0) {
+
+      const file = files[0]
+
+      if (file.type.startsWith('image/')) {
+
+        const dragEnabled = false // set to true if you want to enable :)
+
+        if (!dragEnabled) {
+
+          setIsDropImportOpen(true)
+
+          return
+        }
+
+        try {
+
+          const assetId = await saveAsset(file)
+
+          const reader = new FileReader()
+
+          reader.onload = (event) => {
+            const src = event.target?.result as string
+            const img = new Image()
+            img.src = src
+            img.onload = () => {
+
+              const state = transformRef.current?.instance?.transformState || { positionX: 0, positionY: 0, scale: 1 }
+              const rect = containerRef.current?.getBoundingClientRect() || { left: 0, top: 0 }
+              const mouseX = e.clientX - rect.left
+              const mouseY = e.clientY - rect.top
+              const worldX = (mouseX - state.positionX) / state.scale
+              const worldY = (mouseY - state.positionY) / state.scale
+
+              const newImage: ImageElement = {
+                id: crypto.randomUUID(),
+                type: 'image',
+                x: worldX - (img.width / 2),
+                y: worldY - (img.height / 2),
+                width: img.width,
+                height: img.height,
+                src: assetId,
+                opacity: 100,
+                cornerStyle: 'sharp'
+              }
+
+              historyRef.current.push([...elements])
+              redoRef.current = []
+              setElements(prev => [...prev, newImage])
+              needsRedrawRef.current = true
+            }
+          }
+          reader.readAsDataURL(file)
+        } catch (error) {
+          console.error('Failed to save asset:', error)
+        }
+      }
+    }
+  }
 
   useEffect(() => {
     if (isWorkspacesLoaded) {
@@ -1204,7 +1279,13 @@ export function Canvas() {
           />
         )}
 
-        <div ref={containerRef} className="relative w-full h-screen overflow-hidden transition-colors duration-300 ease-in-out" style={{ backgroundColor: canvasColor }}>
+        <div
+          ref={containerRef}
+          className="relative w-full h-screen overflow-hidden transition-colors duration-300 ease-in-out"
+          style={{ backgroundColor: canvasColor }}
+          onDragOver={handleDragOver}
+          onDrop={handleDrop}
+        >
           <TransformWrapper
             ref={transformRef}
             initialScale={1}
@@ -1795,6 +1876,7 @@ export function Canvas() {
         onSwitchWorkspace={(id) => switchWorkspace(id)}
       />
       <DebuggerOverlay elements={elements} selectedIds={selectedIds} transformRef={transformRef} containerRef={containerRef} />
+      <DropImport isOpen={isDropImportOpen} onClose={() => setIsDropImportOpen(false)} />
     </div >
   )
 }

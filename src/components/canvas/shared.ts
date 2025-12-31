@@ -94,6 +94,24 @@ export type TextElement = {
   height?: number
 }
 
+// Note:
+// we'll use this as a custom type to add text into boxes, and other elements
+// I removed the position on the canvas (x,y) because it will be relative to the parent element
+// other properties will stay for now I guess
+// not exported as a canvasElement yet!
+export type TextElementProp = {
+  id: string
+  type: 'proptext'
+  text: string
+  color: string
+  fontSize: number
+  fontFamily: string
+  fontWeight: 'normal' | 'bold'
+  fontStyle: 'hand-drawn' | 'normal' | 'code' | 'n-dot'
+  width?: number
+  height?: number
+}
+
 export type ImageElement = {
   id: string
   type: 'image'
