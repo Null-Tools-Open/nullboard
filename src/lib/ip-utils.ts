@@ -4,8 +4,6 @@ import crypto from 'crypto'
 const IP_ENCRYPTION_SECRET = process.env.IP_ENCRYPTION_SECRET
 const ALGORITHM = 'aes-256-gcm'
 const IV_LENGTH = 16
-const SALT_LENGTH = 64
-const TAG_LENGTH = 16
 
 function deriveKey(userId: string): Buffer {
   const keyMaterial = `${userId}:${IP_ENCRYPTION_SECRET}`
@@ -68,33 +66,33 @@ export function getClientIpFromHeaders(getHeader: (name: string) => string | nul
     }
     return clientIp
   }
-  
+
   const forwardedFor = getHeader('x-forwarded-for')
   const realIp = getHeader('x-real-ip')
-  
+
   if (forwardedFor) {
     const ips = forwardedFor.split(',').map(ip => ip.trim())
-    
+
     const ipv4 = ips.find(ip => {
       return /^(\d{1,3}\.){3}\d{1,3}$/.test(ip)
     })
-    
+
     if (ipv4) {
       return ipv4
     }
-    
+
     if (ips.length > 0) {
       return ips[0]
     }
   }
-  
+
   if (realIp) {
     if (/^(\d{1,3}\.){3}\d{1,3}$/.test(realIp)) {
       return realIp
     }
     return realIp
   }
-  
+
   return 'unknown'
 }
 

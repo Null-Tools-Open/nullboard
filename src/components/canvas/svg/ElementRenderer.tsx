@@ -10,7 +10,8 @@ import {
     SvgImage,
     SvgFrame,
     SvgEmbed,
-    SvgSticker
+    SvgSticker,
+    SvgStickyNote
 } from './elements'
 
 interface ElementRendererProps {
@@ -57,6 +58,8 @@ export function ElementRenderer({ elements, editingTextId, markedForErasureIds }
                             return <SvgEmbed key={element.id} element={element} />
                         case 'sticker':
                             return <SvgSticker key={element.id} element={element} />
+                        case 'stickyNote':
+                            return <SvgStickyNote key={element.id} element={element} isEditing={element.id === editingTextId} />
                         default:
                             return null
                     }

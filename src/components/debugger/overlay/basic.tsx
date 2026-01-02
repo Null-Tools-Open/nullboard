@@ -1,7 +1,6 @@
 'use client'
 
 import { useDebugger } from '@/contexts/debuggerContext'
-import { useWorkspaces } from '@/hooks/useWorkspaces'
 import { useTheme } from '@/hooks/useTheme'
 import type { CanvasElement, Point } from '@/components/canvas/shared'
 import { toScreen } from '@/components/canvas/shared'
@@ -112,40 +111,39 @@ export function DebuggerOverlay({ elements = [], selectedIds = [], transformRef,
 
   const getElementInfoLines = (el: CanvasElement): string[] => {
     const lines: string[] = []
-    lines.push(`type: ${el.type}`)
-    lines.push(`id: ${el.id}`)
 
-    if ('x' in el) lines.push(`x: ${Math.round(el.x)}`)
-    if ('y' in el) lines.push(`y: ${Math.round(el.y)}`)
-    if ('width' in el && el.width !== undefined) lines.push(`width: ${Math.round(el.width)}`)
-    if ('height' in el && el.height !== undefined) lines.push(`height: ${Math.round(el.height)}`)
-    if ('radius' in el) lines.push(`radius: ${Math.round(el.radius)}`)
-    if ('strokeColor' in el) lines.push(`strokeColor: ${el.strokeColor}`)
-    if ('fillColor' in el) lines.push(`fillColor: ${el.fillColor || 'none'}`)
-    if ('strokeWidth' in el) lines.push(`strokeWidth: ${el.strokeWidth}`)
-    if ('strokeStyle' in el) lines.push(`strokeStyle: ${el.strokeStyle}`)
-    if ('color' in el) lines.push(`color: ${el.color}`)
-    if (el.type === 'path' && 'width' in el) lines.push(`width: ${el.width}`)
-    if ('points' in el) lines.push(`points: ${el.points.length}`)
-    if ('start' in el) {
-      lines.push(`start: (${Math.round(el.start.x)}, ${Math.round(el.start.y)})`)
-      lines.push(`end: (${Math.round(el.end.x)}, ${Math.round(el.end.y)})`)
-    }
-    if ('text' in el) lines.push(`text: "${el.text}"`)
-    if ('fontSize' in el) lines.push(`fontSize: ${el.fontSize}`)
-    if ('fontFamily' in el) lines.push(`fontFamily: ${el.fontFamily}`)
-    if ('fontWeight' in el) lines.push(`fontWeight: ${el.fontWeight}`)
-    if ('fontStyle' in el) lines.push(`fontStyle: ${el.fontStyle}`)
-    if ('textAlign' in el) lines.push(`textAlign: ${el.textAlign}`)
-    if ('src' in el) lines.push(`src: ${el.src}`)
-    if ('url' in el) lines.push(`url: ${el.url || 'none'}`)
-    if ('name' in el) lines.push(`name: ${el.name || 'unnamed'}`)
-    if ('layer' in el) lines.push(`layer: ${el.layer}`)
-    if ('arrowStart' in el) lines.push(`arrowStart: ${el.arrowStart}`)
-    if ('arrowEnd' in el) lines.push(`arrowEnd: ${el.arrowEnd}`)
-    if ('arrowType' in el) lines.push(`arrowType: ${el.arrowType}`)
-    if ('cornerStyle' in el) lines.push(`cornerStyle: ${el.cornerStyle}`)
-    if ('opacity' in el) lines.push(`opacity: ${Math.round(el.opacity * 100)}%`)
+    const orderedKeys = ['type', 'id', 'x', 'y', 'width', 'height']
+
+    orderedKeys.forEach(key => {
+      if (key in el) {
+        // @ts-ignore
+        const val = el[key]
+        lines.push(`${key}: ${typeof val === 'number' ? Math.round(val) : val}`)
+      }
+    })
+
+    Object.entries(el).forEach(([key, value]) => {
+      if (orderedKeys.includes(key)) return
+
+      let displayVal = value
+      if (typeof value === 'number') {
+        displayVal = Math.round(value * 100) / 100
+      } else if (key === 'points' && Array.isArray(value)) {
+        displayVal = `${value.length} pts`
+      } else if (typeof value === 'object' && value !== null) {
+        if ('x' in value && 'y' in value) {
+          displayVal = `(${Math.round(value.x)}, ${Math.round(value.y)})`
+        } else {
+          try {
+            displayVal = JSON.stringify(value).substring(0, 20) + (JSON.stringify(value).length > 20 ? '...' : '')
+          } catch {
+            displayVal = '[object]'
+          }
+        }
+      }
+
+      lines.push(`${key}: ${displayVal}`)
+    })
 
     return lines
   }
@@ -161,7 +159,7 @@ export function DebuggerOverlay({ elements = [], selectedIds = [], transformRef,
         const lines = getElementInfoLines(el)
 
         const isDark = resolvedTheme === 'dark'
-        
+
         return (
           <div
             key={el.id}
@@ -173,7 +171,7 @@ export function DebuggerOverlay({ elements = [], selectedIds = [], transformRef,
               left: `${position.x}px`,
               top: `${position.y - (lines.length * 12 + 10)}px`,
               transform: 'translateX(-50%)',
-              textShadow: isDark 
+              textShadow: isDark
                 ? '0 0 4px rgba(0,0,0,0.8), 0 0 8px rgba(0,0,0,0.6), 1px 1px 2px rgba(0,0,0,0.8)'
                 : 'none'
             }}

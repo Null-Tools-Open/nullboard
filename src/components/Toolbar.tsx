@@ -49,6 +49,7 @@ export type ToolType =
   | 'frame'
   | 'embed'
   | 'sticker'
+  | 'stickyNote'
   | 'more_tools'
   | 'lock'
 
@@ -150,6 +151,7 @@ export function Toolbar({ selectedTool = 'select', onToolChange, isLocked = fals
         M: 'more_tools',
         F: 'frame',
         K: 'laser',
+        N: 'stickyNote',
         ...numericToTool,
       }
 
@@ -306,8 +308,9 @@ export function Toolbar({ selectedTool = 'select', onToolChange, isLocked = fals
           const isEmbedActive = activeTool === 'embed'
 
           const isStickerActive = activeTool === 'sticker'
+          const isStickyNoteActive = activeTool === 'stickyNote'
 
-          const DisplayIcon = isMoreTools && isLaserActive ? Wand2 : (isMoreTools && isLassoActive ? Lasso : (isMoreTools && isFrameActive ? Hash : (isMoreTools && isEmbedActive ? Code : (isMoreTools && isStickerActive ? StickyNote : Icon))))
+          const DisplayIcon = isMoreTools && isLaserActive ? Wand2 : (isMoreTools && isLassoActive ? Lasso : (isMoreTools && isFrameActive ? Hash : (isMoreTools && isEmbedActive ? Code : (isMoreTools && isStickerActive ? StickyNote : (isMoreTools && isStickyNoteActive ? StickyNote : Icon)))))
 
           const buttonContent = (
             <motion.button
@@ -393,6 +396,11 @@ export function Toolbar({ selectedTool = 'select', onToolChange, isLocked = fals
                   <DropdownMenuItem onClick={() => handleToolClick('sticker' as ToolType)}>
                     <StickyNote size={16} />
                     <span>Sticker</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleToolClick('stickyNote' as ToolType)}>
+                    <StickyNote size={16} />
+                    <span>Sticky Note</span>
+                    <span className="ml-auto text-xs text-gray-400">N</span>
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => {
                     if (activeTool === 'laser') {

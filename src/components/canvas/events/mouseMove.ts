@@ -37,6 +37,7 @@ export function handleMouseMove(
     tempFrame: { start: Point; end: Point } | null
     tempEmbed: { start: Point; end: Point } | null
     tempSticker: { start: Point; end: Point } | null
+    tempStickyNote: { start: Point; end: Point } | null
     isShiftPressed: boolean
     elements: CanvasElement[]
     textResizeInitialStateRef: React.MutableRefObject<{
@@ -67,6 +68,7 @@ export function handleMouseMove(
     setTempFrame: React.Dispatch<React.SetStateAction<{ start: Point; end: Point } | null>>
     setTempEmbed: React.Dispatch<React.SetStateAction<{ start: Point; end: Point } | null>>
     setTempSticker: React.Dispatch<React.SetStateAction<{ start: Point; end: Point } | null>>
+    setTempStickyNote: React.Dispatch<React.SetStateAction<{ start: Point; end: Point } | null>>
     setSelectionBox: React.Dispatch<React.SetStateAction<{ start: Point; end: Point } | null>>
     setElements: React.Dispatch<React.SetStateAction<CanvasElement[]>>
     setDragStart: React.Dispatch<React.SetStateAction<Point | null>>
@@ -220,6 +222,10 @@ export function handleMouseMove(
     } else if (context.selectedTool === 'sticker' && context.tempSticker) {
       context.setTempSticker({ ...context.tempSticker, end: pos })
       context.needsRedrawRef.current = true
+    } else if (context.selectedTool === 'stickyNote' && context.tempStickyNote) {
+      // Force square (symmetrical) - use max dimension for both width and height
+      context.setTempStickyNote({ ...context.tempStickyNote, end: pos })
+      context.needsRedrawRef.current = true
     }
   } else if (context.isSelecting && context.selectionBox) {
     context.setSelectionBox({ ...context.selectionBox, end: pos })
@@ -258,7 +264,7 @@ export function handleMouseMove(
             }
           } else if (el.type === 'text') {
             return { ...el, x: el.x + dx, y: el.y + dy }
-          } else if (el.type === 'image' || el.type === 'embed' || el.type === 'sticker') {
+          } else if (el.type === 'image' || el.type === 'embed' || el.type === 'sticker' || el.type === 'stickyNote') {
             return { ...el, x: el.x + dx, y: el.y + dy }
           } else if (el.type === 'frame') {
             return { ...el, x: el.x + dx, y: el.y + dy }
@@ -294,7 +300,7 @@ export function handleMouseMove(
           } else if (el.type === 'text') {
 
             return { ...el, x: el.x + dx, y: el.y + dy }
-          } else if (el.type === 'image' || el.type === 'embed' || el.type === 'sticker') {
+          } else if (el.type === 'image' || el.type === 'embed' || el.type === 'sticker' || el.type === 'stickyNote') {
 
             return { ...el, x: el.x + dx, y: el.y + dy }
           }
@@ -607,7 +613,7 @@ export function handleMouseMove(
         }
 
         return newEl
-      } else if (el.type === 'image' || el.type === 'sticker') {
+      } else if (el.type === 'image' || el.type === 'sticker' || el.type === 'stickyNote') {
         let newEl = { ...el }
         const dx = pos.x - (context.dragStart?.x || el.x)
         const dy = pos.y - (context.dragStart?.y || el.y)

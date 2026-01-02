@@ -143,7 +143,7 @@ export function generateTestWorkspace(): CanvasElement[] {
   const fontStyles: Array<'hand-drawn' | 'normal' | 'code' | 'n-dot'> = ['normal', 'hand-drawn', 'code', 'n-dot']
   const textAligns: Array<'left' | 'center' | 'right'> = ['left', 'center', 'right']
   const fontWeights: Array<'normal' | 'bold'> = ['normal', 'bold']
-  
+
   fontStyles.forEach((fontStyle, i) => {
     textAligns.forEach((textAlign, j) => {
       fontWeights.forEach((fontWeight, k) => {
@@ -191,7 +191,7 @@ export function generateTestWorkspace(): CanvasElement[] {
     'https://player.vimeo.com/video/148751763',
     'https://codepen.io/team/codepen/embed/preview/example',
   ]
-  
+
   embedUrls.forEach((url, i) => {
     const pos = nextPos()
     const embed: EmbedElement = {
@@ -205,6 +205,26 @@ export function generateTestWorkspace(): CanvasElement[] {
       opacity: 1
     }
     elements.push(embed)
+  })
+
+  const stickyColors = ['#fef08a', '#86efac', '#7dd3fc', '#fda4af', '#c4b5fd']
+  const foldCorners: Array<'topLeft' | 'topRight' | 'bottomLeft' | 'bottomRight' | 'none'> = ['topRight', 'topLeft', 'bottomRight', 'bottomLeft', 'none']
+
+  stickyColors.forEach((color, i) => {
+    const pos = nextPos()
+    elements.push({
+      id: `stickyNote-${Date.now()}-${i}`,
+      type: 'stickyNote' as const,
+      x: pos.x,
+      y: pos.y,
+      width: 150 + i * 20,
+      height: 150 + i * 20,
+      color: color,
+      opacity: 1,
+      text: i === 0 ? 'Shopping list:\n- milk\n- bread\n- butter' : i === 1 ? 'TODO: fix bugs' : i === 2 ? '' : `Note ${i + 1}`,
+      fontSize: 24,
+      foldCorner: foldCorners[i]
+    })
   })
 
   return elements

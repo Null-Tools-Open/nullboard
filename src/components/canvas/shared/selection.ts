@@ -155,6 +155,8 @@ export function isElementInBox(
     return !(el.x + el.width < minX || el.x > maxX || el.y + el.height < minY || el.y > maxY)
   } else if (el.type === 'sticker') {
     return !(el.x + el.width < minX || el.x > maxX || el.y + el.height < minY || el.y > maxY)
+  } else if (el.type === 'stickyNote') {
+    return !(el.x + el.width < minX || el.x > maxX || el.y + el.height < minY || el.y > maxY)
   }
 
   return false

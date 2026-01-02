@@ -10,6 +10,7 @@ import type { ImageOptions } from '../../options/imageOptionsPanel'
 import type { FrameOptions } from '../../options/frameOptionsPanel'
 import type { EmbedOptions } from '../../options/embedOptionsPanel'
 import type { StickerOptions } from '../../options/stickerOptionsPanel'
+import type { StickyNoteOptions } from '../../options/stickyNoteOptionsPanel'
 
 export function getSelectedElementType(
   selectedIds: string[],
@@ -25,7 +26,7 @@ export function getSelectedElementType(
 export function getSelectedElementOptions(
   selectedIds: string[],
   elements: CanvasElement[]
-): RectangleOptions | DiamondOptions | CircleOptions | PenOptions | LineOptions | ArrowOptions | TextOptions | ImageOptions | FrameOptions | EmbedOptions | null {
+): RectangleOptions | DiamondOptions | CircleOptions | PenOptions | LineOptions | ArrowOptions | TextOptions | ImageOptions | FrameOptions | EmbedOptions | StickyNoteOptions | null {
   if (selectedIds.length === 1) {
     const el = elements.find(e => e.id === selectedIds[0])
     if (!el) return null
@@ -110,6 +111,12 @@ export function getSelectedElementOptions(
         opacity: Math.round(el.opacity * 100),
         cornerStyle: el.cornerStyle || 'sharp'
       }
+    } else if (el.type === 'stickyNote') {
+      return {
+        color: el.color,
+        opacity: Math.round(el.opacity * 100),
+        foldCorner: el.foldCorner || 'topRight'
+      }
     }
   }
   return null
@@ -118,7 +125,7 @@ export function getSelectedElementOptions(
 export function updateSelectedElements(
   selectedIds: string[],
   elements: CanvasElement[],
-  updates: Partial<RectangleOptions | CircleOptions | DiamondOptions | PenOptions | LineOptions | ArrowOptions | TextOptions | ImageOptions | FrameOptions | EmbedOptions | StickerOptions>
+  updates: Partial<RectangleOptions | CircleOptions | DiamondOptions | PenOptions | LineOptions | ArrowOptions | TextOptions | ImageOptions | FrameOptions | EmbedOptions | StickerOptions | StickyNoteOptions>
 ): CanvasElement[] {
   if (selectedIds.length === 0) return elements
 
@@ -221,6 +228,14 @@ export function updateSelectedElements(
         ...el,
         opacity: stickerUpdates.opacity !== undefined ? stickerUpdates.opacity / 100 : el.opacity,
         cornerStyle: stickerUpdates.cornerStyle ?? el.cornerStyle ?? 'sharp'
+      }
+    } else if (el.type === 'stickyNote') {
+      const stickyNoteUpdates = updates as Partial<StickyNoteOptions>
+      return {
+        ...el,
+        color: stickyNoteUpdates.color ?? el.color,
+        opacity: stickyNoteUpdates.opacity !== undefined ? stickyNoteUpdates.opacity / 100 : el.opacity,
+        foldCorner: stickyNoteUpdates.foldCorner ?? el.foldCorner ?? 'topRight'
       }
     }
     return el

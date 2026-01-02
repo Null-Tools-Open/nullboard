@@ -1,10 +1,10 @@
 import type { Point } from '../shared'
-import type { RectElement, ImageElement, EmbedElement, StickerElement } from '../shared'
+import type { RectElement, ImageElement, EmbedElement, StickerElement, StickyNoteElement } from '../shared'
 
 /**
  * Gets the resize handle at a given position
  */
-export function getResizeHandle(pos: Point, el: RectElement | ImageElement | EmbedElement | StickerElement): string | null {
+export function getResizeHandle(pos: Point, el: RectElement | ImageElement | EmbedElement | StickerElement | StickyNoteElement): string | null {
 
   const handleSize = 8
 

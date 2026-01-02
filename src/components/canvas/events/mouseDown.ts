@@ -88,6 +88,7 @@ export function handleMouseDown(
     setShouldFadeOut: React.Dispatch<React.SetStateAction<boolean>>
     setSelectionBox: React.Dispatch<React.SetStateAction<{ start: Point; end: Point } | null>>
     setTempSticker: React.Dispatch<React.SetStateAction<{ start: Point; end: Point } | null>>
+    setTempStickyNote: React.Dispatch<React.SetStateAction<{ start: Point; end: Point } | null>>
     setMarkedForErasureIds: React.Dispatch<React.SetStateAction<Set<string>>>
   }
 ) {
@@ -100,12 +101,16 @@ export function handleMouseDown(
 
   if (context.editingTextId && context.textInputRef.current && !(context.textInputRef.current as any).contains?.(e.target as Node)) {
     if (target.tagName !== 'TEXTAREA' && !target.closest('textarea')) {
-      if (context.editingTextValue.trim() === '') {
+      const editingElement = context.elements.find(el => el.id === context.editingTextId)
+
+      if (editingElement?.type === 'text' && context.editingTextValue.trim() === '') {
         context.setElements(prev => prev.filter(el => el.id !== context.editingTextId))
       }
+
       context.setEditingTextId(null)
       context.setEditingTextValue('')
       context.setEditingTextPosition(null)
+      context.setSelectedIds([])
       context.needsRedrawRef.current = true
     }
   }
@@ -246,6 +251,10 @@ export function handleMouseDown(
   } else if (context.selectedTool === 'sticker') {
     context.setSelectedIds([])
     context.setStickerClickPosition(pos)
+  } else if (context.selectedTool === 'stickyNote') {
+    context.setSelectedIds([])
+    context.setIsDrawing(true)
+    context.setTempStickyNote({ start: pos, end: pos })
   } else if (context.selectedTool === 'image') {
     context.setSelectedIds([])
     context.setImageClickPosition(pos)
@@ -271,6 +280,15 @@ export function handleMouseDown(
           return
         }
       } else if (el?.type === 'sticker') {
+        const handle = getResizeHandle(pos, el)
+        if (handle) {
+          context.historyRef.current.push([...context.elements])
+          context.redoRef.current = []
+          context.setIsResizing(handle)
+          context.setDragStart(pos)
+          return
+        }
+      } else if (el?.type === 'stickyNote') {
         const handle = getResizeHandle(pos, el)
         if (handle) {
           context.historyRef.current.push([...context.elements])
@@ -419,6 +437,11 @@ export function handleMouseDown(
           clickedSelected = true
           break
         }
+      } else if (el.type === 'stickyNote') {
+        if (pos.x >= el.x && pos.x <= el.x + el.width && pos.y >= el.y && pos.y <= el.y + el.height) {
+          clickedSelected = true
+          break
+        }
       } else if (el.type === 'frame') {
 
         const handle = getFrameResizeHandle(pos, el)
@@ -526,6 +549,11 @@ export function handleMouseDown(
           break
         }
       } else if (el.type === 'sticker') {
+        if (pos.x >= el.x && pos.x <= el.x + el.width && pos.y >= el.y && pos.y <= el.y + el.height) {
+          found = el.id
+          break
+        }
+      } else if (el.type === 'stickyNote') {
         if (pos.x >= el.x && pos.x <= el.x + el.width && pos.y >= el.y && pos.y <= el.y + el.height) {
           found = el.id
           break

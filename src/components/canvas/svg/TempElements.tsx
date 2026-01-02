@@ -12,6 +12,7 @@ interface TempElementsProps {
     tempFrame?: { start: Point; end: Point } | null
     tempEmbed?: { start: Point; end: Point } | null
     tempSticker?: { start: Point; end: Point } | null
+    tempStickyNote?: { start: Point; end: Point } | null
     tempTextRect?: { start: Point; end: Point } | null
     selectionBox?: { start: Point; end: Point } | null
     strokeColor?: string
@@ -32,6 +33,7 @@ export function TempElements({
     tempFrame,
     tempEmbed,
     tempSticker,
+    tempStickyNote,
     tempTextRect,
     selectionBox,
     strokeColor = '#000000',
@@ -314,6 +316,35 @@ export function TempElements({
                     </text>
                 </g>
             )}
+
+            {/* Sticky Note Box */}
+            {tempStickyNote && (() => {
+                const size = Math.max(
+                    Math.abs(tempStickyNote.end.x - tempStickyNote.start.x),
+                    Math.abs(tempStickyNote.end.y - tempStickyNote.start.y)
+                )
+                const x = tempStickyNote.end.x >= tempStickyNote.start.x
+                    ? tempStickyNote.start.x
+                    : tempStickyNote.start.x - size
+                const y = tempStickyNote.end.y >= tempStickyNote.start.y
+                    ? tempStickyNote.start.y
+                    : tempStickyNote.start.y - size
+                return (
+                    <g>
+                        <rect
+                            x={x}
+                            y={y}
+                            width={size}
+                            height={size}
+                            stroke="#eab308"
+                            strokeWidth="2"
+                            strokeDasharray="8,4"
+                            fill="rgba(234, 179, 8, 0.2)"
+                            rx="4"
+                        />
+                    </g>
+                )
+            })()}
 
             {/* Text Box */}
             {tempTextRect && (

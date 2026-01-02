@@ -34,6 +34,7 @@ export function handleMouseUp(
     tempFrame: { start: Point; end: Point } | null
     tempEmbed: { start: Point; end: Point } | null
     tempSticker: { start: Point; end: Point } | null
+    tempStickyNote: { start: Point; end: Point } | null
     elements: CanvasElement[]
     canvasRef: React.RefObject<HTMLCanvasElement | null>
     historyRef: React.MutableRefObject<CanvasElement[][]>
@@ -83,6 +84,7 @@ export function handleMouseUp(
     setTempFrame: React.Dispatch<React.SetStateAction<{ start: Point; end: Point } | null>>
     setTempEmbed: React.Dispatch<React.SetStateAction<{ start: Point; end: Point } | null>>
     setTempSticker: React.Dispatch<React.SetStateAction<{ start: Point; end: Point } | null>>
+    setTempStickyNote: React.Dispatch<React.SetStateAction<{ start: Point; end: Point } | null>>
     setElements: React.Dispatch<React.SetStateAction<CanvasElement[]>>
     setSelectedIds: React.Dispatch<React.SetStateAction<string[]>>
     setEditingTextId: React.Dispatch<React.SetStateAction<string | null>>
@@ -359,6 +361,38 @@ export function handleMouseUp(
         context.setSelectedIds([newSticker.id])
       }
       context.setTempSticker(null)
+    } else if (context.selectedTool === 'stickyNote' && context.tempStickyNote) {
+      const size = Math.max(
+        Math.abs(context.tempStickyNote.end.x - context.tempStickyNote.start.x),
+        Math.abs(context.tempStickyNote.end.y - context.tempStickyNote.start.y)
+      )
+      const x = context.tempStickyNote.end.x >= context.tempStickyNote.start.x
+        ? context.tempStickyNote.start.x
+        : context.tempStickyNote.start.x - size
+      const y = context.tempStickyNote.end.y >= context.tempStickyNote.start.y
+        ? context.tempStickyNote.start.y
+        : context.tempStickyNote.start.y - size
+
+      if (size > 30) {
+        context.historyRef.current.push([...context.elements])
+        context.redoRef.current = []
+
+        const newStickyNote = {
+          id: `stickyNote-${Date.now()}`,
+          type: 'stickyNote' as const,
+          x,
+          y,
+          width: size,
+          height: size,
+          color: '#fef08a',
+          opacity: 1,
+          foldCorner: 'topRight' as const
+        }
+
+        context.setElements(prev => [...prev, newStickyNote])
+        context.setSelectedIds([newStickyNote.id])
+      }
+      context.setTempStickyNote(null)
     }
     context.setIsDrawing(false)
   }

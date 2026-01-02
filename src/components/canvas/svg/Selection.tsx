@@ -232,6 +232,7 @@ export function Selection({ elements, selectedIds }: SelectionProps) {
                     case 'frame':
                     case 'embed':
                     case 'sticker':
+                    case 'stickyNote':
                         x = element.x
                         y = element.y
                         width = element.width

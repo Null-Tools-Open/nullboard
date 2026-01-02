@@ -16,6 +16,7 @@ import { ImageOptionsPanel, ImageOptions } from './options/imageOptionsPanel'
 import { FrameOptionsPanel, FrameOptions } from './options/frameOptionsPanel'
 import { EmbedOptionsPanel, EmbedOptions } from './options/embedOptionsPanel'
 import { StickerOptionsPanel, StickerOptions } from './options/stickerOptionsPanel'
+import { StickyNoteOptionsPanel } from './options/stickyNoteOptionsPanel'
 import { ZoomControls } from './zoomControls'
 import { LaserPointerManager } from './canvas/lasterPointer'
 import type { Point as LaserPoint } from './canvas/lasterPointer/types'
@@ -24,9 +25,10 @@ import { useTheme } from '@/hooks/useTheme'
 
 import { Grid as SvgGrid, ElementRenderer, Selection, TempElements } from './canvas/svg'
 
-import type { CanvasElement, Point, TextElement, ImageElement, StickerElement } from './canvas/shared'
+import type { CanvasElement, Point, TextElement, ImageElement, StickerElement, StickyNoteElement } from './canvas/shared'
 
 import { isPointInText } from './canvas/text'
+
 import { handleMouseDown, handleMouseMove, handleMouseUp, setupKeyboardHandlers } from './canvas/events'
 import { getCursor } from './canvas/utils/cursor'
 import { getSelectedElementType, getSelectedElementOptions, updateSelectedElements } from './canvas/utils/elementOptions'
@@ -40,7 +42,7 @@ import { WorkspacesSidebar } from './sidebar/Workspaces'
 import { useWorkspaces } from '@/hooks/useWorkspaces'
 import { DebuggerOverlay } from './debugger/overlay/basic'
 import { DropImport } from './prompts/DropImport'
-import { useAuth } from '@/hooks/useAuth'
+import { StickyNoteEditor } from './canvas/stickyNoteEditor'
 
 export function Canvas() {
   const laserCanvasRef = useRef<HTMLCanvasElement>(null)
@@ -109,6 +111,7 @@ export function Canvas() {
   const [tempFrame, setTempFrame] = useState<{ start: Point; end: Point } | null>(null)
   const [tempEmbed, setTempEmbed] = useState<{ start: Point; end: Point } | null>(null)
   const [tempSticker, setTempSticker] = useState<{ start: Point; end: Point } | null>(null)
+  const [tempStickyNote, setTempStickyNote] = useState<{ start: Point; end: Point } | null>(null)
   const [imageClickPosition, setImageClickPosition] = useState<Point | null>(null)
   const [stickerClickPosition, setStickerClickPosition] = useState<Point | null>(null)
   const [isShiftPressed, setIsShiftPressed] = useState(false)
@@ -840,6 +843,7 @@ export function Canvas() {
       setTempFrame,
       setTempEmbed,
       setTempSticker,
+      setTempStickyNote,
       setImageClickPosition,
       setStickerClickPosition,
       setLaserPointerOutline,
@@ -895,6 +899,8 @@ export function Canvas() {
       setTempEmbed,
       tempSticker,
       setTempSticker,
+      tempStickyNote,
+      setTempStickyNote,
       setSelectionBox,
       setElements,
       setDragStart,
@@ -962,6 +968,8 @@ export function Canvas() {
       embedOptions,
       setTempEmbed,
       setTempSticker,
+      tempStickyNote,
+      setTempStickyNote,
       stickerImage,
       stickerOptions,
       setElements,
@@ -1340,6 +1348,14 @@ export function Canvas() {
                         setEditingTextPosition({ x: el.x, y: el.y })
                         setSelectedIds([el.id])
                         break
+                      } else if (el.type === 'stickyNote' &&
+                        pos.x >= el.x && pos.x <= el.x + el.width &&
+                        pos.y >= el.y && pos.y <= el.y + el.height) {
+                        setEditingTextId(el.id)
+                        setEditingTextValue(el.text || '')
+                        setEditingTextPosition({ x: el.x, y: el.y })
+                        setSelectedIds([el.id])
+                        break
                       }
                     }
                   }
@@ -1363,6 +1379,7 @@ export function Canvas() {
                   tempFrame={tempFrame}
                   tempEmbed={tempEmbed}
                   tempSticker={tempSticker}
+                  tempStickyNote={tempStickyNote}
                   tempTextRect={tempTextRect}
                   selectionBox={selectionBox}
                   strokeColor={
@@ -1402,7 +1419,36 @@ export function Canvas() {
                 <Selection elements={elements} selectedIds={selectedIds} />
               </svg>
               {editingTextId && editingTextPosition && (() => {
-                const textElement = elements.find(e => e.id === editingTextId && e.type === 'text') as TextElement | undefined
+                const textElement = elements.find(e => e.id === editingTextId) as TextElement | StickyNoteElement | undefined
+                if (!textElement) return null
+
+                if (textElement.type === 'stickyNote') {
+                  return (
+                    <StickyNoteEditor
+                      ref={textInputRef}
+                      element={textElement as StickyNoteElement}
+                      onChange={(text, fontSize) => {
+                        setEditingTextValue(text)
+                        setElements(prev => prev.map(el => {
+                          if (el.id === editingTextId && el.type === 'stickyNote') {
+                            return { ...el, text: text, fontSize: fontSize }
+                          }
+                          return el
+                        }))
+                        needsRedrawRef.current = true
+                      }}
+                      onBlur={() => {
+                        setEditingTextId(null)
+                        setEditingTextValue('')
+                        setEditingTextPosition(null)
+                        setSelectedIds([])
+                        needsRedrawRef.current = true
+                      }}
+                    />
+                  )
+                }
+
+                if (textElement.type !== 'text') return null
                 const minWidth = 200
                 const width = Math.max(textElement?.width || minWidth, minWidth)
                 const fontSize = textElement?.fontSize || textOptions.fontSize
@@ -1436,23 +1482,30 @@ export function Canvas() {
                           if (textInputRef.current) {
                             textInputRef.current.style.height = 'auto'
                             const scrollHeight = textInputRef.current.scrollHeight
-                            const currentTextElement = elements.find(e => e.id === editingTextId && e.type === 'text') as TextElement | undefined
-                            const currentFontSize = currentTextElement?.fontSize || textOptions.fontSize
-                            const minHeight = currentFontSize * 1.2
-                            const newHeight = Math.max(scrollHeight, minHeight)
-                            textInputRef.current.style.height = `${newHeight}px`
-                            setTextareaHeight(newHeight)
+                            const currentTextElement = elements.find(e => e.id === editingTextId) as TextElement | undefined
+                            let newHeight = 0
+                            if (currentTextElement?.type === 'text') {
+                              const currentFontSize = currentTextElement?.fontSize || textOptions.fontSize
+                              const minHeight = currentFontSize * 1.2
+                              newHeight = Math.max(scrollHeight, minHeight)
+                              textInputRef.current.style.height = `${newHeight}px`
+                              setTextareaHeight(newHeight)
+                            } else {
+                              newHeight = currentTextElement?.height || 0
+                            }
 
                             const scrollWidth = textInputRef.current.scrollWidth
                             const currentWidth = currentTextElement?.width || 200
                             const newWidth = Math.max(scrollWidth, currentWidth)
 
-                            setElements(prev => prev.map(el => {
-                              if (el.id === editingTextId && el.type === 'text') {
-                                return { ...el, height: newHeight, width: newWidth }
-                              }
-                              return el
-                            }))
+                            if (currentTextElement?.type === 'text') {
+                              setElements(prev => prev.map(el => {
+                                if (el.id === editingTextId && el.type === 'text') {
+                                  return { ...el, height: newHeight, width: newWidth }
+                                }
+                                return el
+                              }))
+                            }
                           }
                         })
                       })
@@ -1759,6 +1812,24 @@ export function Canvas() {
               onOptionsChange={(newOptions) => setElements(updateSelectedElements(selectedIds, elements, newOptions))}
             />
           </div>
+        )}
+        {(selectedTool === 'stickyNote' || getSelectedElementTypeWrapper() === 'stickyNote') && (
+          <StickyNoteOptionsPanel
+            options={{
+              color: (getSelectedElementOptionsWrapper() as any)?.color || '#fef08a',
+              opacity: (getSelectedElementOptionsWrapper() as any)?.opacity ? Math.round((getSelectedElementOptionsWrapper() as any).opacity * 100) : 100,
+              foldCorner: (getSelectedElementOptionsWrapper() as any)?.foldCorner || 'topRight'
+            }}
+            onOptionsChange={(newOptions) => {
+              if (selectedIds.length === 1 && getSelectedElementTypeWrapper() === 'stickyNote') {
+                setElements(updateSelectedElements(selectedIds, elements, {
+                  color: newOptions.color,
+                  opacity: newOptions.opacity,
+                  foldCorner: newOptions.foldCorner
+                }))
+              }
+            }}
+          />
         )}
         <ZoomControls
           transformRef={transformRef}
