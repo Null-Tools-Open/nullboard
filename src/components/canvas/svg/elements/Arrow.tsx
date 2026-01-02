@@ -42,16 +42,6 @@ export function SvgArrow({ element }: SvgArrowProps) {
         cp = { x: mx + px * offset, y: my + py * offset }
     }
 
-    let pathD = ''
-    if (arrowType === 'curved' && cp) {
-        pathD = `M ${start.x} ${start.y} Q ${cp.x} ${cp.y} ${end.x} ${end.y}`
-    } else if (arrowType === 'elbowed') {
-        const midX = (start.x + end.x) / 2
-        pathD = `M ${start.x} ${start.y} L ${midX} ${start.y} L ${midX} ${end.y} L ${end.x} ${end.y}`
-    } else {
-        pathD = `M ${start.x} ${start.y} L ${end.x} ${end.y}`
-    }
-
     const headSize = Math.max(strokeWidth * 4, 12)
 
     let endAngle = 0
@@ -70,6 +60,29 @@ export function SvgArrow({ element }: SvgArrowProps) {
         startAngle = Math.PI
     } else {
         startAngle = Math.atan2(start.y - end.y, start.x - end.x)
+    }
+
+    const shortenAmount = arrowEnd ? headSize * Math.cos(Math.PI / 6) : 0
+    const shortenedEnd = {
+        x: end.x - shortenAmount * Math.cos(endAngle),
+        y: end.y - shortenAmount * Math.sin(endAngle)
+    }
+
+    const shortenStartAmount = arrowStart ? headSize * Math.cos(Math.PI / 6) : 0
+    const shortenedStart = {
+        x: start.x - shortenStartAmount * Math.cos(startAngle),
+        y: start.y - shortenStartAmount * Math.sin(startAngle)
+    }
+
+    let pathD = ''
+
+    if (arrowType === 'curved' && cp) {
+        pathD = `M ${shortenedStart.x} ${shortenedStart.y} Q ${cp.x} ${cp.y} ${shortenedEnd.x} ${shortenedEnd.y}`
+    } else if (arrowType === 'elbowed') {
+        const midX = (start.x + end.x) / 2
+        pathD = `M ${shortenedStart.x} ${shortenedStart.y} L ${midX} ${shortenedStart.y} L ${midX} ${shortenedEnd.y} L ${shortenedEnd.x} ${shortenedEnd.y}`
+    } else {
+        pathD = `M ${shortenedStart.x} ${shortenedStart.y} L ${shortenedEnd.x} ${shortenedEnd.y}`
     }
 
     return (

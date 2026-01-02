@@ -19,7 +19,7 @@ import { StickerOptionsPanel, StickerOptions } from './options/stickerOptionsPan
 import { ZoomControls } from './zoomControls'
 import { LaserPointerManager } from './canvas/lasterPointer'
 import type { Point as LaserPoint } from './canvas/lasterPointer/types'
-import { useUIPosition, type MenuPosition, type UIPositions, type ToolbarPosition } from '@/hooks/useUIPosition'
+import { useUIPosition, type MenuPosition, type UIPositions } from '@/hooks/useUIPosition'
 import { useTheme } from '@/hooks/useTheme'
 
 import { Grid as SvgGrid, ElementRenderer, Selection, TempElements } from './canvas/svg'
@@ -51,7 +51,6 @@ export function Canvas() {
   const isZoomingRef = useRef(false)
   const { positions, updatePositions: updateUIPositions } = useUIPosition()
   const { resolvedTheme, setTheme, canvasColor } = useTheme()
-  const { user } = useAuth()
   const [isDropImportOpen, setIsDropImportOpen] = useState(false)
 
   const {

@@ -103,6 +103,16 @@ export function Menu({
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+
+      if ((e.ctrlKey || e.metaKey) && e.key === ',') {
+        e.preventDefault()
+        e.stopPropagation()
+        if (user) {
+          setShowUserSettings(true)
+        }
+        return
+      }
+
       if ((e.ctrlKey || e.metaKey) && (e.key === '/' || e.key === 'k')) {
         e.preventDefault()
         e.stopPropagation()
@@ -219,7 +229,8 @@ export function Menu({
             onClick: () => {
               setIsOpen(false)
               setShowUserSettings(true)
-            }
+            },
+            shortcut: 'Ctrl+,'
           },
           {
             label: 'Sign out',

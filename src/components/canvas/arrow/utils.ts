@@ -14,12 +14,12 @@ function distanceToSegment(p: Point, a: Point, b: Point): number {
   if (len2 === 0) return Math.hypot(p.x - a.x, p.y - a.y)
 
   let t = ((p.x - a.x) * dx + (p.y - a.y) * dy) / len2
-  
+
   t = Math.max(0, Math.min(1, t))
-  
+
   const projX = a.x + t * dx
   const projY = a.y + t * dy
-  
+
   return Math.hypot(p.x - projX, p.y - projY)
 }
 
@@ -90,6 +90,6 @@ export function getArrowResizeHandle(pos: Point, arrow: ArrowElement): string | 
 
   if (startDist < handleSize) return 'start'
   if (endDist < handleSize) return 'end'
-  
+
   return null
 }

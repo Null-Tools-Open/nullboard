@@ -113,6 +113,7 @@ export function TempElements({
                     strokeDasharray="5,5"
                     strokeLinecap="round"
                     strokeLinejoin="round"
+                    className="animate-stroke"
                 />
             )}
 
@@ -340,6 +341,7 @@ export function TempElements({
                     strokeWidth="1"
                     strokeDasharray="5,5"
                     fill="rgba(74, 144, 226, 0.1)"
+                    className="animate-stroke"
                 />
             )}
 

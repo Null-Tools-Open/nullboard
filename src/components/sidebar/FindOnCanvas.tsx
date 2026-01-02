@@ -245,7 +245,7 @@ export function FindOnCanvas({ isOpen, onClose, elements, onSelectElement }: Fin
                         <div className="text-center px-6">
                             <h3 className="text-gray-900 dark:text-zinc-200 font-semibold mb-2">Enable Collaboration</h3>
                             <button className="mt-2 px-6 py-2 bg-blue-500 hover:bg-blue-600 dark:bg-blue-600 dark:hover:bg-blue-700 text-white font-medium rounded-lg text-sm transition-colors shadow-lg shadow-blue-500/20 cursor-pointer">
-                                Buy License
+                                Get License
                             </button>
                         </div>
                     </div>
@@ -304,7 +304,7 @@ export function FindOnCanvas({ isOpen, onClose, elements, onSelectElement }: Fin
                         <div className="text-center px-6">
                             <h3 className="text-gray-900 dark:text-zinc-200 font-semibold mb-2">Enable Presentation Mode</h3>
                             <button className="mt-2 px-6 py-2 bg-blue-500 hover:bg-blue-600 dark:bg-blue-600 dark:hover:bg-blue-700 text-white font-medium rounded-lg text-sm transition-colors shadow-lg shadow-blue-500/20 cursor-pointer">
-                                Buy License
+                                Get License
                             </button>
                         </div>
                     </div>
