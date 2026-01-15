@@ -3,7 +3,7 @@
 import { motion } from 'framer-motion'
 import Link from 'next/link'
 import Image from 'next/image'
-import { X } from './icons/pack'
+import { DiscordIcon, X } from './icons/pack'
 import { Github, Linkedin, ArrowUpRight } from 'lucide-react'
 
 export function Footer() {
@@ -48,7 +48,7 @@ export function Footer() {
   const socialLinks = [
     { icon: X, href: 'https://x.com/NullToolsXYZ', label: 'X (Twitter)' },
     { icon: Github, href: 'https://github.com/Null-Tools-Open', label: 'GitHub' },
-    { icon: Linkedin, href: 'https://linkedin.com/company/nulltools', label: 'LinkedIn' },
+    { icon: DiscordIcon, href: 'https://discord.gg/7WMZh7jjEB', label: 'Discord' },
   ]
 
   return (
