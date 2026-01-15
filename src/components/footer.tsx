@@ -248,7 +248,7 @@ export function Footer() {
 
         <div className="pt-8 border-t border-white/10 flex flex-col md:flex-row items-center justify-between gap-4">
           <p className="text-sm text-white/40">
-            © 2025 Null Tools. All rights reserved.
+            © {new Date().getFullYear()} Null Tools. All rights reserved.
           </p>
 
           <div className="hidden lg:block">
