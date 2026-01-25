@@ -33,7 +33,6 @@ export function Footer() {
           // { name: 'For Teams', href: '/teams' },
           // { name: 'For Education', href: '/education' },
           { name: 'License', href: '/license' },
-          // { name: 'Roadmap', href: '/roadmap' },
           // { name: 'Release notes', href: '/releases' },
         ]
       },

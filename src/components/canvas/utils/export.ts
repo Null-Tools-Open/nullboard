@@ -54,22 +54,25 @@ function calculateBounds(elements: CanvasElement[]): { minX: number; minY: numbe
   return { minX, minY, maxX, maxY }
 }
 
-function cleanSvgNode(node: Node): void {
+export function cleanSvgNode(node: Node): void {
+
   if (node.nodeType === Node.ELEMENT_NODE) {
-    const el = node as Element
+
+    const el = node as HTMLElement | SVGElement
+
     Array.from(el.attributes).forEach(attr => {
-      if (attr.name.startsWith('data-') ||
-        attr.name === 'class' ||
-        attr.name === 'style' && attr.value.includes('cursor')) {
+      if (attr.name.startsWith('data-') || attr.name === 'class') {
         el.removeAttribute(attr.name)
       }
     })
-    if (el.hasAttribute('style')) {
-      const style = el.getAttribute('style') || ''
-      const cleanStyle = style.replace(/cursor:\s*[^;]+;?/gi, '').trim()
-      if (cleanStyle) {
-        el.setAttribute('style', cleanStyle)
-      } else {
+
+    if (el.style) {
+
+      el.style.removeProperty('cursor')
+      el.style.removeProperty('background-color')
+      el.style.removeProperty('background')
+
+      if (el.getAttribute('style') === '') {
         el.removeAttribute('style')
       }
     }
@@ -81,7 +84,7 @@ export function handleExportImage(
   elements: CanvasElement[],
   theme: 'light' | 'dark'
 ) {
-  const svgElement = document.querySelector('svg[viewBox="0 0 5000 5000"]')
+  const svgElement = document.getElementById('canvas-svg')
   if (!svgElement) {
     console.warn('SVG element not found for export')
     return
@@ -148,7 +151,9 @@ export function handleExportPng(
   elements: CanvasElement[],
   theme: 'light' | 'dark'
 ) {
-  const svgElement = document.querySelector('svg[viewBox="0 0 5000 5000"]')
+
+  const svgElement = document.getElementById('canvas-svg')
+
   if (!svgElement) return
 
   const { minX, minY, maxX, maxY } = calculateBounds(elements)
@@ -161,10 +166,14 @@ export function handleExportPng(
   svgClone.setAttribute('width', String(width))
   svgClone.setAttribute('height', String(height))
   svgClone.setAttribute('viewBox', `${minX - padding} ${minY - padding} ${width} ${height}`)
+  svgClone.removeAttribute('style')
+
+  cleanSvgNode(svgClone)
 
   const defs = svgClone.querySelector('defs')
   if (defs) defs.remove()
   const gridRect = svgClone.querySelector('rect[fill="url(#grid)"]')
+
   if (gridRect) gridRect.remove()
 
   const bgRect = document.createElementNS('http://www.w3.org/2000/svg', 'rect')
@@ -202,6 +211,110 @@ export function handleExportPng(
           URL.revokeObjectURL(pngUrl)
         }
       }, 'image/png')
+    }
+    URL.revokeObjectURL(url)
+  }
+  img.src = url
+}
+
+export type ExportFormat = 'png' | 'svg' | 'jpeg' | 'webp'
+
+export interface AdvancedExportOptions {
+  format: ExportFormat
+  transparent: boolean
+  scale: number
+}
+
+export function handleAdvancedExport(
+  elements: CanvasElement[],
+  theme: 'light' | 'dark',
+  options: AdvancedExportOptions
+) {
+  const { format, transparent, scale } = options
+
+  const svgElement = document.getElementById('canvas-svg')
+  if (!svgElement) {
+    console.warn('SVG element not found for export')
+    return
+  }
+
+  const { minX, minY, maxX, maxY } = calculateBounds(elements)
+  const padding = 50
+  const width = (maxX - minX) + padding * 2
+  const height = (maxY - minY) + padding * 2
+
+  const svgClone = svgElement.cloneNode(true) as SVGSVGElement
+  svgClone.setAttribute('xmlns', 'http://www.w3.org/2000/svg')
+  svgClone.setAttribute('width', String(width))
+  svgClone.setAttribute('height', String(height))
+  svgClone.setAttribute('viewBox', `${minX - padding} ${minY - padding} ${width} ${height}`)
+  svgClone.removeAttribute('style')
+
+  const defs = svgClone.querySelector('defs')
+
+  if (defs) defs.remove()
+
+  const gridRect = svgClone.querySelector('rect[fill="url(#grid)"]')
+
+  if (gridRect) gridRect.remove()
+
+  if (!transparent) {
+    const bgRect = document.createElementNS('http://www.w3.org/2000/svg', 'rect')
+    bgRect.setAttribute('x', String(minX - padding))
+    bgRect.setAttribute('y', String(minY - padding))
+    bgRect.setAttribute('width', String(width))
+    bgRect.setAttribute('height', String(height))
+    bgRect.setAttribute('fill', theme === 'dark' ? '#1a1a1a' : '#ffffff')
+    svgClone.insertBefore(bgRect, svgClone.firstChild)
+  }
+
+  const serializer = new XMLSerializer()
+  const svgString = serializer.serializeToString(svgClone)
+
+  if (format === 'svg') {
+    const svgBlob = new Blob([svgString], { type: 'image/svg+xml;charset=utf-8' })
+    const url = URL.createObjectURL(svgBlob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `canvas-export-${Date.now()}.svg`
+    a.click()
+    URL.revokeObjectURL(url)
+    return
+  }
+
+  const svgBlob = new Blob([svgString], { type: 'image/svg+xml;charset=utf-8' })
+  const url = URL.createObjectURL(svgBlob)
+
+  const img = new Image()
+  img.onload = () => {
+    const canvas = document.createElement('canvas')
+    canvas.width = width * scale
+    canvas.height = height * scale
+    const ctx = canvas.getContext('2d')
+
+    if (ctx) {
+      ctx.scale(scale, scale)
+
+      if (!transparent) {
+        ctx.fillStyle = theme === 'dark' ? '#1a1a1a' : '#ffffff'
+        ctx.fillRect(0, 0, width, height)
+      }
+
+      ctx.drawImage(img, 0, 0)
+
+      const mimeType = format === 'jpeg' ? 'image/jpeg' : format === 'webp' ? 'image/webp' : 'image/png'
+      const quality = format === 'jpeg' ? 0.92 : undefined
+
+      canvas.toBlob((blob) => {
+        if (blob) {
+          const blobUrl = URL.createObjectURL(blob)
+          const a = document.createElement('a')
+          a.href = blobUrl
+          a.download = `canvas-export-${Date.now()}.${format}`
+          a.click()
+          URL.revokeObjectURL(blobUrl)
+        }
+      }, mimeType, quality)
     }
     URL.revokeObjectURL(url)
   }

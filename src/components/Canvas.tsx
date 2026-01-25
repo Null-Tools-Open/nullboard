@@ -1,7 +1,10 @@
 'use client'
 
-import { useEffect, useRef, useState, useCallback } from 'react'
+import { useEffect, useRef, useState, useCallback, useMemo } from 'react'
+import { Crown, Lock, Check, Glasses, AtSign, Users } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { secureFetch } from '@/lib/crypto'
+import { motion, AnimatePresence } from 'framer-motion'
 import { TransformWrapper, TransformComponent } from 'react-zoom-pan-pinch'
 import { Toolbar, ToolType } from './Toolbar'
 import { Menu } from './Menu'
@@ -22,19 +25,16 @@ import { LaserPointerManager } from './canvas/lasterPointer'
 import type { Point as LaserPoint } from './canvas/lasterPointer/types'
 import { useUIPosition, type MenuPosition, type UIPositions } from '@/hooks/useUIPosition'
 import { useTheme } from '@/hooks/useTheme'
-
 import { Grid as SvgGrid, ElementRenderer, Selection, TempElements } from './canvas/svg'
-
+import { RemoteCursors } from './canvas/RemoteCursors'
 import type { CanvasElement, Point, TextElement, ImageElement, StickerElement, StickyNoteElement } from './canvas/shared'
-
 import { isPointInText } from './canvas/text'
-
 import { handleMouseDown, handleMouseMove, handleMouseUp, setupKeyboardHandlers } from './canvas/events'
 import { getCursor } from './canvas/utils/cursor'
 import { getSelectedElementType, getSelectedElementOptions, updateSelectedElements } from './canvas/utils/elementOptions'
 import { handleUndo, handleRedo } from './canvas/utils/history'
 import { saveAsset } from '@/lib/assetStore'
-import { handleSaveAs, handleExportImage } from './canvas/utils/export'
+import { handleSaveAs, handleExportImage, handleAdvancedExport } from './canvas/utils/export'
 import { handleOpen } from './canvas/utils/import'
 import { generateTestWorkspace } from './canvas/utils/testWorkspace'
 import { FindOnCanvas } from './sidebar/FindOnCanvas'
@@ -42,9 +42,24 @@ import { WorkspacesSidebar } from './sidebar/Workspaces'
 import { useWorkspaces } from '@/hooks/useWorkspaces'
 import { DebuggerOverlay } from './debugger/overlay/basic'
 import { DropImport } from './prompts/DropImport'
+import { RealTimeColabPrompt } from './prompts/realTimeColab'
+import { SessionEndedPrompt } from './prompts/sessionEnded'
 import { StickyNoteEditor } from './canvas/stickyNoteEditor'
+import { useCollaboration } from '@/hooks/useCollaboration'
+import { RightClickMenu } from './rightClickMenu'
+import { WorkspaceClearPrompt } from './prompts/workspaceClear'
+import { ExportImagePrompt, type ExportOptions } from './prompts/exportImage'
+import { useSearchParams } from 'next/navigation'
+import { useAuth } from '@/hooks/useAuth'
 
 export function Canvas() {
+  const searchParams = useSearchParams()
+  const urlRoomId = searchParams?.get('room') || ''
+  const [collabState, setCollabState] = useState({ roomId: urlRoomId, isRoomCreator: false })
+  const roomId = collabState.roomId
+  const isRoomCreator = collabState.isRoomCreator
+  const setRoomId = (id: string) => setCollabState(prev => ({ ...prev, roomId: id }))
+  const setIsRoomCreator = (value: boolean) => setCollabState(prev => ({ ...prev, isRoomCreator: value }))
   const laserCanvasRef = useRef<HTMLCanvasElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
   const transformRef = useRef<any>(null)
@@ -54,6 +69,7 @@ export function Canvas() {
   const { positions, updatePositions: updateUIPositions } = useUIPosition()
   const { resolvedTheme, setTheme, canvasColor } = useTheme()
   const [isDropImportOpen, setIsDropImportOpen] = useState(false)
+  const [isCollabPromptOpen, setIsCollabPromptOpen] = useState(false)
 
   const {
     workspaces,
@@ -73,12 +89,106 @@ export function Canvas() {
     updateUIPositions(updates)
   }, [updateUIPositions])
 
-
-
   const handleZoomPosChange = useCallback((pos: MenuPosition) => updatePositions({ zoom: pos }), [updatePositions])
-
   const handleDragPreviewZoom = useCallback((pos: MenuPosition | null) => setDragSnapPreview(pos ? { type: 'zoom', position: pos } : null), [])
-  const [elements, setElements] = useState<CanvasElement[]>([])
+  const [localElements, setLocalElements] = useState<CanvasElement[]>([])
+  const { user: authUser } = useAuth()
+
+  const sanitizeNickname = useCallback((nickname: string): string => {
+    return nickname
+      .replace(/[^\w\s-]/g, '')
+      .replace(/\s+/g, ' ')
+      .trim()
+      .slice(0, 30)
+  }, [])
+
+  const collabUser = useMemo(() => ({
+    name: authUser?.name
+      ? sanitizeNickname(authUser.name)
+      : 'User-' + Math.floor(Math.random() * 1000),
+    color: '#' + Math.floor(Math.random() * 16777215).toString(16),
+    isAnonymous: !authUser
+  }), [authUser, sanitizeNickname])
+
+  const {
+    status: connectionStatus,
+    setElements: setRemoteElements,
+    remoteCursors,
+    updateCursor,
+    isHost,
+    stopSession,
+    leaveRoom,
+    sessionEnded,
+    clearSessionEnded,
+    connectionFailed,
+    clearConnectionFailed,
+    roomSettings,
+    updateRoomSettings
+  } = useCollaboration(roomId, localElements, setLocalElements, collabUser, isRoomCreator)
+
+  useEffect(() => {
+    if (connectionFailed) {
+      setRoomId('')
+      setIsRoomCreator(false)
+      const url = new URL(window.location.href)
+      url.searchParams.delete('room')
+      window.history.pushState({}, '', url.toString())
+      clearConnectionFailed()
+    }
+  }, [connectionFailed, clearConnectionFailed])
+
+  const [showCursors, setShowCursors] = useState(authUser?.colabCursors ?? true)
+  const [showParticipants, setShowParticipants] = useState(false)
+
+  useEffect(() => {
+    if (authUser?.colabCursors !== undefined) {
+      setShowCursors(authUser.colabCursors)
+    }
+  }, [authUser?.colabCursors])
+
+  const onToggleCursors = useCallback(async () => {
+    const newValue = !showCursors
+    setShowCursors(newValue)
+
+    if (authUser) {
+      try {
+        await secureFetch('/api/user/preferences', {
+          method: 'PATCH',
+          body: JSON.stringify({ colabCursors: newValue })
+        })
+      } catch (err) {
+        console.error('Failed to sync cursor preference:', err)
+      }
+    }
+  }, [showCursors, authUser])
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.code === 'Backquote' && roomId) {
+        e.preventDefault()
+        setShowParticipants(true)
+      }
+    }
+    const handleKeyUp = (e: KeyboardEvent) => {
+      if (e.code === 'Backquote' && roomId) {
+        e.preventDefault()
+        setShowParticipants(false)
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    window.addEventListener('keyup', handleKeyUp)
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown)
+      window.removeEventListener('keyup', handleKeyUp)
+    }
+  }, [roomId])
+
+  const isRestricted = collabUser.isAnonymous && !roomSettings.guestEditAccess && !isHost
+
+  const setElements = roomId && connectionStatus === 'connected' ? setRemoteElements : setLocalElements
+  const elements = localElements
+
   const [selectedTool, setSelectedTool] = useState<ToolType>('pan')
   const [isLocked, setIsLocked] = useState(false)
   const [isFindSidebarOpen, setIsFindSidebarOpen] = useState(false)
@@ -94,6 +204,14 @@ export function Canvas() {
   const [dragStart, setDragStart] = useState<Point | null>(null)
   const [hoverHandle, setHoverHandle] = useState<string | null>(null)
   const [hoverElement, setHoverElement] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (isRestricted && selectedTool !== 'pan') {
+      setSelectedTool('pan')
+      setSelectedIds([])
+    }
+  }, [isRestricted, selectedTool])
+
   const historyRef = useRef<CanvasElement[][]>([])
   const redoRef = useRef<CanvasElement[][]>([])
   const [canUndo, setCanUndo] = useState(false)
@@ -137,6 +255,143 @@ export function Canvas() {
 
   const [isLayoutEditing, setIsLayoutEditing] = useState(false)
   const [dragSnapPreview, setDragSnapPreview] = useState<{ type: 'menu' | 'toolbar' | 'zoom', position: string | null } | null>(null)
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null)
+
+  const handleContextMenu = useCallback((e: React.MouseEvent) => {
+    e.preventDefault()
+    setContextMenu({ x: e.clientX, y: e.clientY })
+  }, [])
+
+  const [isClearWorkspaceOpen, setIsClearWorkspaceOpen] = useState(false)
+  const [isExportImageOpen, setIsExportImageOpen] = useState(false)
+
+  const handleCloseContextMenu = useCallback(() => {
+    setContextMenu(null)
+  }, [])
+
+  const handleContextSelectAll = useCallback(() => {
+    const allIds = elements.map(el => el.id)
+    setSelectedIds(allIds)
+    needsRedrawRef.current = true
+    handleCloseContextMenu()
+  }, [elements, handleCloseContextMenu])
+
+  const handleContextZoomIn = useCallback(() => {
+    if (transformRef.current) {
+      transformRef.current.zoomIn()
+    }
+    handleCloseContextMenu()
+  }, [handleCloseContextMenu])
+
+  const handleContextZoomOut = useCallback(() => {
+    if (transformRef.current) {
+      transformRef.current.zoomOut()
+    }
+    handleCloseContextMenu()
+  }, [handleCloseContextMenu])
+
+  const handleManualPaste = useCallback(async () => {
+
+    const pasteInternalClipboard = () => {
+
+      if (clipboardRef.current.length === 0) return false
+
+      const currentClipboard = clipboardRef.current
+      historyRef.current.push([...elementsRef.current])
+      redoRef.current = []
+
+      const pastedElements = currentClipboard.map(el => {
+        const newId = `${el.type}-${Date.now()}-${Math.random()}`
+        let newEl = { ...el, id: newId } as any
+        if (newEl.x !== undefined) { newEl.x += 20; newEl.y += 20 }
+        if (newEl.points) {
+          newEl.points = newEl.points.map((p: any) => ({ x: p.x + 20, y: p.y + 20 }))
+        }
+        if (newEl.start) {
+          newEl.start = { x: newEl.start.x + 20, y: newEl.start.y + 20 }
+          newEl.end = { x: newEl.end.x + 20, y: newEl.end.y + 20 }
+          if (newEl.controlPoint) {
+            newEl.controlPoint = { x: newEl.controlPoint.x + 20, y: newEl.controlPoint.y + 20 }
+          }
+        }
+        return newEl as CanvasElement
+      })
+
+      setElements(prev => [...prev, ...pastedElements])
+      setSelectedIds(pastedElements.map(el => el.id))
+      needsRedrawRef.current = true
+      return true
+    }
+
+    if (clipboardRef.current.length > 0) {
+      pasteInternalClipboard()
+      handleCloseContextMenu()
+      return
+    }
+
+    try {
+      const clipboardItems = await navigator.clipboard.read()
+
+      for (const item of clipboardItems) {
+        const imageType = item.types.find(t => t.startsWith('image/'))
+
+        if (imageType) {
+          const blob = await item.getType(imageType)
+          const file = new File([blob], "pasted-image.png", { type: blob.type })
+
+          const assetId = await saveAsset(file)
+
+          const reader = new FileReader()
+          reader.onload = (event) => {
+            const src = event.target?.result as string
+            const img = new Image()
+            img.src = src
+            img.onload = () => {
+              const state = transformRef.current?.instance?.transformState || { positionX: 0, positionY: 0, scale: 1 }
+              const container = containerRef.current
+
+              if (!container) return
+
+              const rect = container.getBoundingClientRect()
+              const centerX = rect.width / 2
+              const centerY = rect.height / 2
+              const worldX = (centerX - state.positionX) / state.scale
+              const worldY = (centerY - state.positionY) / state.scale
+
+              const newImage: ImageElement = {
+                id: crypto.randomUUID(),
+                type: 'image',
+                x: worldX - (img.width / 2),
+                y: worldY - (img.height / 2),
+                width: img.width,
+                height: img.height,
+                src: assetId,
+                opacity: 100,
+                cornerStyle: 'sharp'
+              }
+              historyRef.current.push([...elementsRef.current])
+              redoRef.current = []
+              setElements(prev => [...prev, newImage])
+              setSelectedIds([newImage.id])
+              needsRedrawRef.current = true
+            }
+          }
+          reader.readAsDataURL(file)
+          handleCloseContextMenu()
+          return
+        }
+      }
+    } catch (err) {
+      console.error("Clipboard read failed. LMAOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO IMAGINE FUCK THIS SHI UP :sob:", err)
+    }
+
+    handleCloseContextMenu()
+  }, [handleCloseContextMenu, setElements])
+
+  const handleContextClearWorkspace = useCallback(() => {
+    setIsClearWorkspaceOpen(true)
+    handleCloseContextMenu()
+  }, [handleCloseContextMenu])
 
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault()
@@ -167,12 +422,13 @@ export function Canvas() {
         try {
 
           const assetId = await saveAsset(file)
-
           const reader = new FileReader()
 
           reader.onload = (event) => {
+
             const src = event.target?.result as string
             const img = new Image()
+
             img.src = src
             img.onload = () => {
 
@@ -225,10 +481,12 @@ export function Canvas() {
   }, [activeWorkspaceId, isWorkspacesLoaded, loadWorkspaceData])
 
   useEffect(() => {
-    if (isWorkspacesLoaded && !isWorkspaceLoadingRef.current) {
+    const shouldSave = isWorkspacesLoaded && !isWorkspaceLoadingRef.current && (!roomId || isHost)
+
+    if (shouldSave) {
       saveWorkspaceData(activeWorkspaceId, elements)
     }
-  }, [elements, activeWorkspaceId, isWorkspacesLoaded, saveWorkspaceData])
+  }, [elements, activeWorkspaceId, isWorkspacesLoaded, saveWorkspaceData, roomId, isHost])
 
   const [rectOptions, setRectOptions] = useState<RectangleOptions>({
     strokeColor: '#000000',
@@ -375,6 +633,16 @@ export function Canvas() {
     selectedToolRef.current = selectedTool
     shouldFadeOutRef.current = shouldFadeOut
   }, [isDrawing, selectedTool, shouldFadeOut])
+
+  useEffect(() => {
+    if (sessionEnded) {
+      const url = new URL(window.location.href)
+      if (url.searchParams.has('room')) {
+        url.searchParams.delete('room')
+        window.history.pushState({}, '', url.toString())
+      }
+    }
+  }, [sessionEnded])
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -746,6 +1014,8 @@ export function Canvas() {
   }, [elements])
 
   useEffect(() => {
+    if (isRestricted) return
+
     return setupKeyboardHandlers(
       selectedIds,
       elements,
@@ -779,6 +1049,128 @@ export function Canvas() {
     }
   }, [])
 
+  const elementsRef = useRef(elements)
+
+  elementsRef.current = elements
+
+  const clipboardRef = useRef(clipboard)
+  clipboardRef.current = clipboard
+
+  useEffect(() => {
+    const handlePaste = async (e: ClipboardEvent) => {
+      const target = e.target as HTMLElement
+
+      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) {
+        return
+      }
+
+      const items = e.clipboardData?.items
+
+      if (!items) return
+
+      for (let i = 0; i < items.length; i++) {
+        const item = items[i]
+
+        if (item.type.startsWith('image/')) {
+          e.preventDefault()
+
+          const file = item.getAsFile()
+          if (!file) continue
+
+          try {
+            const assetId = await saveAsset(file)
+
+            const reader = new FileReader()
+            reader.onload = (event) => {
+              const src = event.target?.result as string
+              const img = new Image()
+              img.src = src
+              img.onload = () => {
+                const state = transformRef.current?.instance?.transformState || { positionX: 0, positionY: 0, scale: 1 }
+                const container = containerRef.current
+
+                if (!container) return
+
+                const rect = container.getBoundingClientRect()
+                const centerX = rect.width / 2
+                const centerY = rect.height / 2
+                const worldX = (centerX - state.positionX) / state.scale
+                const worldY = (centerY - state.positionY) / state.scale
+
+                const newImage: ImageElement = {
+                  id: crypto.randomUUID(),
+                  type: 'image',
+                  x: worldX - (img.width / 2),
+                  y: worldY - (img.height / 2),
+                  width: img.width,
+                  height: img.height,
+                  src: assetId,
+                  opacity: 100,
+                  cornerStyle: 'sharp'
+                }
+
+                historyRef.current.push([...elementsRef.current])
+                redoRef.current = []
+                setElements(prev => [...prev, newImage])
+                setSelectedIds([newImage.id])
+                needsRedrawRef.current = true
+              }
+            }
+            reader.readAsDataURL(file)
+          } catch (error) {
+            console.error('Failed to paste image:', error)
+          }
+          return
+        }
+      }
+
+      const currentClipboard = clipboardRef.current
+
+      if (currentClipboard.length > 0) {
+        e.preventDefault()
+
+        historyRef.current.push([...elementsRef.current])
+        redoRef.current = []
+
+        const pastedElements = currentClipboard.map(el => {
+          const newId = `${el.type}-${Date.now()}-${Math.random()}`
+          if (el.type === 'rect' || el.type === 'diamond' || el.type === 'circle') {
+            return { ...el, id: newId, x: el.x + 20, y: el.y + 20 }
+          } else if (el.type === 'path') {
+            const offsetPoints = el.points.map((p: { x: number; y: number }) => ({ x: p.x + 20, y: p.y + 20 }))
+            const bounds = {
+              minX: Math.min(...offsetPoints.map((p: { x: number }) => p.x)),
+              minY: Math.min(...offsetPoints.map((p: { y: number }) => p.y)),
+              maxX: Math.max(...offsetPoints.map((p: { x: number }) => p.x)),
+              maxY: Math.max(...offsetPoints.map((p: { y: number }) => p.y))
+            }
+            return { ...el, id: newId, points: offsetPoints, bounds }
+          } else if (el.type === 'line' || el.type === 'arrow') {
+            return {
+              ...el,
+              id: newId,
+              start: { x: el.start.x + 20, y: el.start.y + 20 },
+              end: { x: el.end.x + 20, y: el.end.y + 20 },
+              controlPoint: el.type === 'arrow' && el.controlPoint
+                ? { x: el.controlPoint.x + 20, y: el.controlPoint.y + 20 }
+                : undefined
+            }
+          } else if (el.type === 'text' || el.type === 'image' || el.type === 'frame' || el.type === 'embed' || el.type === 'sticker' || el.type === 'stickyNote') {
+            return { ...el, id: newId, x: el.x + 20, y: el.y + 20 }
+          }
+          return Object.assign({}, el, { id: newId }) as CanvasElement
+        })
+
+        setElements(prev => [...prev, ...pastedElements])
+        setSelectedIds(pastedElements.map(el => el.id))
+        needsRedrawRef.current = true
+      }
+    }
+
+    window.addEventListener('paste', handlePaste)
+    return () => window.removeEventListener('paste', handlePaste)
+  }, [setElements])
+
 
   useEffect(() => {
     const handleMouseUp = (e: MouseEvent) => {
@@ -793,10 +1185,15 @@ export function Canvas() {
   }, [isMiddleButtonDown])
 
   const onMouseDown = (e: React.MouseEvent) => {
+    if (isRestricted) {
+      const isMiddleClick = e.button === 1
+      if (selectedTool !== 'pan' && !isMiddleClick) return
+    }
+
     const pos = toWorld(e)
     handleMouseDown(e, pos, {
       isLocked,
-      selectedTool,
+      selectedTool: isRestricted ? 'pan' : selectedTool,
       elements,
       selectedIds,
       editingTextId,
@@ -855,11 +1252,13 @@ export function Canvas() {
   }
 
   const onMouseMove = (e: React.MouseEvent) => {
+    if (isRestricted && !isPanning && selectedTool !== 'pan') return
+
     const pos = toWorld(e)
     handleMouseMove(e, pos, {
       isPanning,
       isDrawing,
-      selectedTool,
+      selectedTool: isRestricted ? 'pan' : selectedTool,
       isSelecting,
       selectionBox,
       isDragging,
@@ -912,10 +1311,12 @@ export function Canvas() {
   }
 
   const onMouseUp = (e?: React.MouseEvent) => {
+    if (isRestricted && !isPanning && selectedTool !== 'pan') return
+
     handleMouseUp(e, {
       isMiddleButtonDown,
       isDrawing,
-      selectedTool,
+      selectedTool: isRestricted ? 'pan' : selectedTool,
       isSelecting,
       selectionBox,
       tempPath,
@@ -1014,8 +1415,8 @@ export function Canvas() {
   }, [elements])
 
   const handleExportImageWrapper = useCallback(() => {
-    handleExportImage(elements, resolvedTheme)
-  }, [elements, resolvedTheme])
+    setIsExportImageOpen(true)
+  }, [])
 
   const handleOpenWrapper = useCallback(() => {
     handleOpen(elements, historyRef, redoRef, setElements, setSelectedIds, needsRedrawRef)
@@ -1057,7 +1458,34 @@ export function Canvas() {
           onDragPreview={(pos) => setDragSnapPreview(pos ? { type: 'menu', position: pos } : null)}
           onFindCanvas={() => setIsFindSidebarOpen(true)}
           onWorkspaces={() => setIsWorkspacesSidebarOpen(true)}
+          onRealTimeColab={(id) => {
+            if (id) {
+              setRoomId(id)
+              const url = new URL(window.location.href)
+              url.searchParams.set('room', id)
+              window.history.pushState({}, '', url.toString())
+            }
+            setIsCollabPromptOpen(true)
+          }}
+          activeRoomId={roomId}
+          isHost={isHost}
+          connectionStatus={connectionStatus}
+          onStopSession={() => {
+            if (isHost) {
+              stopSession && stopSession()
+            } else {
+              leaveRoom && leaveRoom()
+            }
+            const url = new URL(window.location.href)
+            url.searchParams.delete('room')
+            window.history.pushState({}, '', url.toString())
+            setRoomId('')
+          }}
+          showCursors={showCursors}
+          onToggleCursors={onToggleCursors}
           elementCount={elements.length}
+          roomSettings={roomSettings}
+          onUpdateRoomSettings={updateRoomSettings}
         />
 
         {isLayoutEditing && (
@@ -1157,13 +1585,19 @@ export function Canvas() {
 
         <Toolbar
           selectedTool={selectedTool}
-          onToolChange={setSelectedTool}
+          onToolChange={(tool) => {
+            if (isRestricted && tool !== 'pan') {
+              return
+            }
+            setSelectedTool(tool)
+          }}
           isLocked={isLocked}
           onLockToggle={() => setIsLocked(!isLocked)}
           position={positions.toolbar}
           isLayoutEditing={isLayoutEditing}
           onPositionChange={(pos) => updatePositions({ toolbar: pos })}
           onDragPreview={(pos) => setDragSnapPreview(pos ? { type: 'toolbar', position: pos } : null)}
+          isRestricted={isRestricted}
         />
         {(selectedTool === 'rectangle' || (getSelectedElementTypeWrapper() === 'rect' && selectedIds.length === 1)) && (
           <RectangleOptionsPanel
@@ -1324,6 +1758,7 @@ export function Canvas() {
               contentStyle={{ width: '100%', height: '100vh' }}
             >
               <svg
+                id="canvas-svg"
                 className="w-full h-full transition-colors duration-300 ease-in-out"
                 width="100%"
                 height="100%"
@@ -1332,10 +1767,45 @@ export function Canvas() {
                   backgroundColor: canvasColor,
                   overflow: 'visible'
                 }}
+                onPointerMove={(e) => {
+                  if (roomId && connectionStatus === 'connected' && updateCursor) {
+                    const worldPos = toWorld(e)
+
+                    const activity = {
+                      tempPath,
+                      tempRect,
+                      tempDiamond,
+                      tempCircle,
+                      tempLine,
+                      tempArrow,
+                      tempFrame,
+                      tempEmbed,
+                      tempSticker,
+                      tempStickyNote,
+                      tempTextRect,
+                      strokeColor: selectedTool === 'pen' ? penOptions.strokeColor :
+                        selectedTool === 'line' ? lineOptions.strokeColor :
+                          selectedTool === 'rectangle' ? rectOptions.strokeColor :
+                            selectedTool === 'circle' ? circleOptions.strokeColor :
+                              selectedTool === 'diamond' ? diamondOptions.strokeColor :
+                                selectedTool === 'arrow' ? arrowOptions.strokeColor : '#000000',
+                      strokeWidth: selectedTool === 'pen' ? penOptions.strokeWidth : 2,
+                      fillColor: selectedTool === 'rectangle' ? rectOptions.fillColor :
+                        selectedTool === 'circle' ? circleOptions.fillColor :
+                          selectedTool === 'diamond' ? diamondOptions.fillColor : 'transparent',
+                      strokeStyle: selectedTool === 'rectangle' ? rectOptions.strokeStyle : 'solid'
+                    }
+
+                    const hasActivity = tempPath?.length || tempRect || tempDiamond || tempCircle || tempLine || tempArrow || tempFrame || tempEmbed || tempSticker || tempStickyNote || tempTextRect
+
+                    updateCursor(worldPos.x, worldPos.y, hasActivity ? activity : undefined)
+                  }
+                }}
                 onMouseDown={onMouseDown}
                 onMouseMove={onMouseMove}
                 onMouseUp={onMouseUp}
                 onMouseLeave={onMouseUp}
+                onContextMenu={handleContextMenu}
                 onDoubleClick={(e) => {
                   e.stopPropagation()
                   if (selectedTool === 'select') {
@@ -1368,6 +1838,18 @@ export function Canvas() {
                   containerHeight={containerRef.current?.clientHeight}
                 />
                 <ElementRenderer elements={elements} editingTextId={editingTextId} markedForErasureIds={markedForErasureIds} />
+
+                {Array.from(remoteCursors.values()).map(cursor => {
+                  if (!cursor.activity) return null
+                  return (
+                    <g key={`remote-activity-${cursor.clientId}`} style={{ opacity: 0.6 }}>
+                      <TempElements
+                        {...cursor.activity}
+                      />
+                    </g>
+                  )
+                })}
+
                 <TempElements
                   tempPath={tempPath}
                   tempLassoPath={tempLassoPath}
@@ -1427,7 +1909,7 @@ export function Canvas() {
                     <StickyNoteEditor
                       ref={textInputRef}
                       element={textElement as StickyNoteElement}
-                      onChange={(text, fontSize) => {
+                      onChange={(text: string, fontSize: number) => {
                         setEditingTextValue(text)
                         setElements(prev => prev.map(el => {
                           if (el.id === editingTextId && el.type === 'stickyNote') {
@@ -1621,12 +2103,10 @@ export function Canvas() {
                     }
                     setImageClickPosition(null)
 
-                    // Resize logic
-                    const maxSize = 1500 // Max dimension for stored asset
+                    const maxSize = 1500
                     let width = img.width
                     let height = img.height
 
-                    // Calculate display size (separate from storage size if needed, but here we sync)
                     const displayMaxSize = 500
                     let displayWidth = img.width
                     let displayHeight = img.height
@@ -1636,7 +2116,6 @@ export function Canvas() {
                       displayHeight = displayHeight * scale
                     }
 
-                    // Canvas for resizing storage asset
                     const canvas = document.createElement('canvas')
                     let storeWidth = img.width
                     let storeHeight = img.height
@@ -1844,6 +2323,35 @@ export function Canvas() {
           onDragPreview={handleDragPreviewZoom}
         />
       </div>
+      <RealTimeColabPrompt
+        isOpen={isCollabPromptOpen}
+        onClose={() => setIsCollabPromptOpen(false)}
+        activeRoomId={roomId}
+        connectionStatus={connectionStatus}
+        onStartSession={(id, isCreating) => {
+          setCollabState({ roomId: id, isRoomCreator: isCreating })
+          const url = new URL(window.location.href)
+          url.searchParams.set('room', id)
+          window.history.pushState({}, '', url.toString())
+        }}
+        isHost={isHost}
+        onStopSession={() => {
+          if (isHost) {
+            stopSession && stopSession()
+          } else {
+            leaveRoom && leaveRoom()
+            const data = loadWorkspaceData(activeWorkspaceId)
+            setElements(data)
+            historyRef.current = []
+            redoRef.current = []
+          }
+          const url = new URL(window.location.href)
+          url.searchParams.delete('room')
+          window.history.pushState({}, '', url.toString())
+          setRoomId('')
+        }}
+        activeUsers={[collabUser, ...Array.from(remoteCursors.values())]}
+      />
       <FindOnCanvas
         isOpen={isFindSidebarOpen}
         onClose={() => setIsFindSidebarOpen(false)}
@@ -1946,7 +2454,190 @@ export function Canvas() {
         onSwitchWorkspace={(id) => switchWorkspace(id)}
       />
       <DebuggerOverlay elements={elements} selectedIds={selectedIds} transformRef={transformRef} containerRef={containerRef} />
-      <DropImport isOpen={isDropImportOpen} onClose={() => setIsDropImportOpen(false)} />
+      <DropImport
+        isOpen={isDropImportOpen}
+        onClose={() => setIsDropImportOpen(false)}
+      />
+
+      {
+        roomId && connectionStatus === 'connected' && showCursors && (
+          <RemoteCursors cursors={remoteCursors} transformRef={transformRef} />
+        )
+      }
+
+      <AnimatePresence>
+        {showParticipants && roomId && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95, y: -20 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.95, y: -20 }}
+            transition={{ type: 'spring', stiffness: 300, damping: 25 }}
+            className="fixed top-24 left-1/2 -translate-x-1/2 z-[100] bg-white dark:bg-[#1A1A1A] backdrop-blur-md p-6 rounded-2xl border border-black/5 dark:border-white/10 shadow-xl dark:shadow-2xl min-w-[340px]"
+          >
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 rounded-xl bg-black/5 dark:bg-white/5 border border-black/5 dark:border-white/10 flex items-center justify-center">
+                  <Users className="text-gray-900 dark:text-white/80" size={24} />
+                </div>
+                <div>
+                  <span className="text-gray-900 dark:text-white font-caveat text-xl font-bold block">Participant List</span>
+                  <span className="text-gray-500 dark:text-white/40 text-sm font-mono">
+                    {remoteCursors.size + 1} active
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-3 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
+              <div className="flex items-center gap-3 p-3 rounded-xl bg-black/5 dark:bg-white/5 border border-black/5 dark:border-white/5 transition-colors">
+                <div className="relative">
+                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-gray-100 to-gray-200 dark:from-white/5 dark:to-white/10 border border-black/10 dark:border-white/10 flex items-center justify-center shadow-sm">
+                    <span className="font-caveat font-bold text-gray-700 dark:text-white/80 text-lg">
+                      {collabUser.name.charAt(0).toUpperCase()}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-gray-900 dark:text-white truncate text-sm">
+                      {collabUser.name}
+                    </span>
+                    <span className="text-[10px] font-bold uppercase tracking-wider bg-black/10 dark:bg-white/10 text-gray-600 dark:text-white/60 px-1.5 py-0.5 rounded">
+                      YOU
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-1.5 mt-0.5">
+                    {isHost ? (
+                      <span className="text-[10px] text-yellow-600 dark:text-yellow-400 font-bold uppercase tracking-wider flex items-center gap-1">
+                        <Crown size={12} className="fill-current" /> HOST
+                      </span>
+                    ) : (
+                      <span className="text-[10px] text-gray-400 dark:text-white/30 font-bold uppercase tracking-wider flex items-center gap-1">
+                        {collabUser.isAnonymous ? <Glasses size={12} /> : <AtSign size={12} />}
+                        {collabUser.isAnonymous ? 'Guest' : 'Member'}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {Array.from(remoteCursors.values()).map(cursor => (
+                <div key={cursor.clientId} className="flex items-center gap-3 p-3 rounded-xl hover:bg-black/5 dark:hover:bg-white/5 border border-transparent hover:border-black/5 dark:hover:border-white/5 transition-all group">
+                  <div className="relative">
+                    <div
+                      className="w-10 h-10 rounded-full border border-black/10 dark:border-white/10 flex items-center justify-center shadow-sm"
+                      style={{ backgroundColor: cursor.color + '20' }}
+                    >
+                      <span
+                        className="font-caveat font-bold text-lg"
+                        style={{ color: cursor.color }}
+                      >
+                        {cursor.name.charAt(0).toUpperCase()}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between">
+                      <span className="font-medium text-gray-700 dark:text-white/80 group-hover:text-gray-900 dark:group-hover:text-white transition-colors truncate text-sm">
+                        {cursor.name}
+                      </span>
+                    </div>
+
+                    <div className="flex items-center gap-1.5 mt-0.5">
+                      {cursor.isHost ? (
+                        <span className="text-[10px] text-yellow-600 dark:text-yellow-400 font-bold uppercase tracking-wider flex items-center gap-1">
+                          <Crown size={12} className="fill-current" /> HOST
+                        </span>
+                      ) : (
+                        <span className="text-[10px] text-gray-400 dark:text-white/30 font-bold uppercase tracking-wider flex items-center gap-1">
+                          {cursor.isAnonymous ? <Glasses size={12} /> : <AtSign size={12} />}
+                          {cursor.isAnonymous ? 'Guest' : 'Member'}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="mt-6 pt-4 border-t border-black/5 dark:border-white/10 flex items-center justify-between text-xs text-gray-400 dark:text-white/30 font-bold uppercase tracking-wider">
+              <div className="flex items-center gap-2">
+                {roomSettings.guestEditAccess ? (
+                  <div className="flex items-center gap-1.5 text-green-600 dark:text-green-400">
+                    <Check size={12} strokeWidth={3} />
+                    <span>Editing ON</span>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-1.5 text-red-500 dark:text-red-400">
+                    <Lock size={12} />
+                    <span>Editing LOCKED</span>
+                  </div>
+                )}
+              </div>
+              <div className="font-mono opacity-50">#{roomId}</div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <SessionEndedPrompt
+        isOpen={sessionEnded}
+        onClose={() => {
+          clearSessionEnded()
+          setRoomId('')
+          const url = new URL(window.location.href)
+          url.searchParams.delete('room')
+          window.history.pushState({}, '', url.toString())
+
+          const data = loadWorkspaceData(activeWorkspaceId)
+          setElements(data)
+          historyRef.current = []
+          redoRef.current = []
+        }}
+      />
+      {contextMenu && (
+        <RightClickMenu
+          x={contextMenu.x}
+          y={contextMenu.y}
+          onClose={handleCloseContextMenu}
+          onPaste={handleManualPaste}
+          onSelectAll={handleContextSelectAll}
+          onZoomIn={handleContextZoomIn}
+          onZoomOut={handleContextZoomOut}
+          onExportImage={() => {
+            setIsExportImageOpen(true)
+            handleCloseContextMenu()
+          }}
+          onClearWorkspace={() => {
+            setIsClearWorkspaceOpen(true)
+            handleCloseContextMenu()
+          }}
+        />
+      )}
+
+      <WorkspaceClearPrompt
+        isOpen={isClearWorkspaceOpen}
+        onConfirm={() => {
+          setElements([])
+          historyRef.current.push([...elements])
+          redoRef.current = []
+          needsRedrawRef.current = true
+          setIsClearWorkspaceOpen(false)
+        }}
+        onCancel={() => setIsClearWorkspaceOpen(false)}
+      />
+
+      <ExportImagePrompt
+        isOpen={isExportImageOpen}
+        onClose={() => setIsExportImageOpen(false)}
+        elements={elements}
+        theme={resolvedTheme as 'light' | 'dark'}
+        onExport={(options) => {
+          handleAdvancedExport(elements, resolvedTheme as 'light' | 'dark', options)
+        }}
+      />
     </div >
   )
 }

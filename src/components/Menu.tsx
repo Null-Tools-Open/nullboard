@@ -1,7 +1,6 @@
 'use client'
 
 import { useTheme } from '@/hooks/useTheme'
-
 import { useState, useRef, useEffect } from 'react'
 import React from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -15,8 +14,6 @@ import {
   Search,
   HelpCircle,
   Trash2,
-  Github,
-  X as XIcon,
   LogIn,
   Sun,
   Moon,
@@ -27,7 +24,7 @@ import {
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Kbd, KbdGroup } from '@/components/ui/kbd'
-import { DiscordIcon } from './icons/pack'
+import { DiscordIcon, X, GitHubIconDark, GitHubIconLight } from './icons/pack'
 import { CommandPalette } from './prompts/commandPalette'
 import { HelpDialog } from './prompts/HelpDialog'
 import { WorkspaceClearPrompt } from './prompts/workspaceClear'
@@ -68,7 +65,24 @@ interface MenuProps {
   onFindCanvas?: () => void
   elementCount?: number
   onWorkspaces?: () => void
-  onRealTimeColab?: () => void
+  onRealTimeColab?: (roomId?: string, isCreating?: boolean) => void
+  activeRoomId?: string
+  isHost?: boolean
+  connectionStatus?: 'connected' | 'connecting' | 'disconnected'
+  onStopSession?: () => void
+  roomSettings?: { guestEditAccess: boolean }
+  onUpdateRoomSettings?: (settings: { guestEditAccess: boolean }) => void
+  showCursors?: boolean
+  onToggleCursors?: () => void
+}
+
+const GitHubIcon = ({ size, className }: { size?: number; className?: string }) => {
+
+  const { resolvedTheme } = useTheme()
+
+  if (resolvedTheme === 'dark') return <GitHubIconLight size={size} className={className} />
+
+  return <GitHubIconDark size={size} className={className} />
 }
 
 export function Menu({
@@ -85,7 +99,15 @@ export function Menu({
   onFindCanvas,
   elementCount = 0,
   onWorkspaces,
-  onRealTimeColab
+  onRealTimeColab,
+  activeRoomId,
+  isHost,
+  connectionStatus,
+  onStopSession,
+  roomSettings,
+  onUpdateRoomSettings,
+  showCursors,
+  onToggleCursors
 }: MenuProps = {}) {
   const [isOpen, setIsOpen] = useState(false)
   const { theme, setTheme, resolvedTheme, canvasColor, setCanvasColor } = useTheme()
@@ -202,8 +224,8 @@ export function Menu({
     },
     {
       items: [
-        { label: 'GitHub', icon: Github, href: 'https://github.com/Null-Tools-Open', external: true },
-        { label: 'Follow us', icon: XIcon, href: 'https://x.com/NullToolsXYZ', external: true },
+        { label: 'GitHub', icon: GitHubIcon, href: 'https://github.com/Null-Tools-Open', external: true },
+        { label: 'Follow us', icon: X, href: 'https://x.com/NullToolsXYZ', external: true },
         { label: 'Discord', icon: DiscordIcon, href: 'https://discord.gg/7WMZh7jjEB', external: true },
         ...(user ? [
           {
@@ -578,9 +600,13 @@ export function Menu({
       <RealTimeColabPrompt
         isOpen={showRealTimeColab}
         onClose={() => setShowRealTimeColab(false)}
-        onStartSession={() => {
-          console.log('Starting session...')
-          if (onRealTimeColab) onRealTimeColab()
+        activeRoomId={activeRoomId}
+        isHost={isHost}
+        connectionStatus={connectionStatus}
+        onStopSession={onStopSession}
+        onStartSession={(id, isCreating) => {
+          setShowRealTimeColab(false)
+          if (onRealTimeColab) onRealTimeColab(id, isCreating)
         }}
       />
 
@@ -588,6 +614,11 @@ export function Menu({
         isOpen={showUserSettings}
         onClose={() => setShowUserSettings(false)}
         elementCount={elementCount}
+        roomSettings={roomSettings}
+        onUpdateRoomSettings={onUpdateRoomSettings}
+        showCursors={showCursors}
+        onToggleCursors={onToggleCursors}
+        isHost={isHost}
       />
     </motion.div>
   )

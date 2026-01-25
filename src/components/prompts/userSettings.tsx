@@ -29,7 +29,8 @@ import {
     Form,
     ThumbsUp,
     Type,
-    Brush
+    Brush,
+    MousePointer2
 } from 'lucide-react'
 
 import { useWorkspaces } from '@/hooks/useWorkspaces'
@@ -45,9 +46,23 @@ interface UserSettingsPromptProps {
     isOpen: boolean
     onClose: () => void
     elementCount?: number
+    roomSettings?: { guestEditAccess: boolean }
+    onUpdateRoomSettings?: (settings: { guestEditAccess: boolean }) => void
+    showCursors?: boolean
+    onToggleCursors?: () => void
+    isHost?: boolean
 }
 
-export function UserSettingsPrompt({ isOpen, onClose, elementCount = 0 }: UserSettingsPromptProps) {
+export function UserSettingsPrompt({
+    isOpen,
+    onClose,
+    elementCount = 0,
+    roomSettings,
+    onUpdateRoomSettings,
+    showCursors,
+    onToggleCursors,
+    isHost
+}: UserSettingsPromptProps) {
     const { user, logout, refreshUser } = useAuth()
     const { theme, setTheme, resolvedTheme, canvasColor, setCanvasColor } = useTheme()
     const [activeTab, setActiveTab] = useState('my-account')
@@ -726,6 +741,105 @@ export function UserSettingsPrompt({ isOpen, onClose, elementCount = 0 }: UserSe
                                         </div>
                                     )}
 
+                                    {activeTab === 'collaboration' && (
+                                        <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300 max-w-2xl">
+                                            <div className="bg-white dark:bg-white/5 border border-black/5 dark:border-white/10 rounded-2xl p-6 backdrop-blur-sm shadow-sm dark:shadow-none">
+                                                <h3 className="text-lg font-caveat font-bold text-gray-900 dark:text-white mb-4">Real-Time Collaboration</h3>
+
+                                                <div className="space-y-4">
+                                                    <div className={cn(
+                                                        "bg-white dark:bg-black/20 border border-black/5 dark:border-white/10 rounded-2xl p-6 backdrop-blur-sm relative overflow-hidden shadow-sm dark:shadow-none",
+                                                        !isHost && "opacity-50 grayscale"
+                                                    )}>
+                                                        <div className="absolute top-0 right-0 p-4 opacity-5">
+                                                            <Lock size={100} className="text-gray-900 dark:text-white" />
+                                                        </div>
+                                                        <div className="flex items-center justify-between relative z-10">
+                                                            <div className="flex items-center gap-4">
+                                                                <div className="w-12 h-12 rounded-xl bg-black/5 dark:bg-white/10 border border-black/10 dark:border-white/10 flex items-center justify-center">
+                                                                    <Lock className="text-gray-900 dark:text-white/80" size={24} />
+                                                                </div>
+                                                                <div>
+                                                                    <span className="text-gray-900 dark:text-white font-caveat text-xl font-bold block">
+                                                                        Guest Edit Access
+                                                                        {isHost && <span className="ml-2 text-xs font-sans font-bold bg-yellow-500/10 text-yellow-600 dark:text-yellow-400 px-2 py-0.5 rounded-full border border-yellow-500/20">HOST ONLY</span>}
+                                                                    </span>
+                                                                    <span className="text-gray-500 dark:text-white/40 text-sm">Allow anonymous guests to edit the canvas</span>
+                                                                </div>
+                                                            </div>
+                                                            <button
+                                                                disabled={!isHost}
+                                                                onClick={() => {
+                                                                    if (onUpdateRoomSettings && roomSettings) {
+                                                                        onUpdateRoomSettings({ guestEditAccess: !roomSettings.guestEditAccess })
+                                                                    }
+                                                                }}
+                                                                className={cn(
+                                                                    "w-14 h-8 rounded-full transition-all duration-300 relative border-2",
+                                                                    !isHost ? "cursor-not-allowed bg-gray-100 border-gray-200" :
+                                                                        roomSettings?.guestEditAccess
+                                                                            ? "bg-green-500 border-green-400 cursor-pointer shadow-[0_0_15px_rgba(34,197,94,0.4)]"
+                                                                            : "bg-gray-200 dark:bg-black/40 border-gray-300 dark:border-white/10 hover:border-gray-400 dark:hover:border-white/20 cursor-pointer"
+                                                                )}
+                                                            >
+                                                                <div className={cn(
+                                                                    "absolute top-1 left-1 w-5 h-5 rounded-full bg-white transition-all duration-300 shadow-sm",
+                                                                    roomSettings?.guestEditAccess ? "translate-x-6 scale-110" : "translate-x-0"
+                                                                )} />
+                                                            </button>
+                                                        </div>
+                                                    </div>
+
+                                                    <div className="bg-white dark:bg-black/20 border border-black/5 dark:border-white/10 rounded-2xl p-6 backdrop-blur-sm relative overflow-hidden shadow-sm dark:shadow-none">
+                                                        <div className="absolute top-0 right-0 p-4 opacity-5">
+                                                            <MousePointer2 size={100} className="text-gray-900 dark:text-white" />
+                                                        </div>
+                                                        <div className="flex items-center justify-between relative z-10">
+                                                            <div className="flex items-center gap-4">
+                                                                <div className="w-12 h-12 rounded-xl bg-black/5 dark:bg-white/10 border border-black/10 dark:border-white/10 flex items-center justify-center">
+                                                                    <MousePointer2 className="text-gray-900 dark:text-white/80" size={24} />
+                                                                </div>
+                                                                <div>
+                                                                    <span className="text-gray-900 dark:text-white font-caveat text-xl font-bold block">Real-time Cursors</span>
+                                                                    <span className="text-gray-500 dark:text-white/40 text-sm">Show other participant cursors</span>
+                                                                </div>
+                                                            </div>
+                                                            <button
+                                                                onClick={onToggleCursors}
+                                                                className={cn(
+                                                                    "w-14 h-8 rounded-full transition-all duration-300 relative cursor-pointer border-2",
+                                                                    showCursors
+                                                                        ? "bg-green-500 border-green-400 shadow-[0_0_15px_rgba(34,197,94,0.4)]"
+                                                                        : "bg-gray-200 dark:bg-black/40 border-gray-300 dark:border-white/10 hover:border-gray-400 dark:hover:border-white/20"
+                                                                )}
+                                                            >
+                                                                <div className={cn(
+                                                                    "absolute top-1 left-1 w-5 h-5 rounded-full bg-white transition-all duration-300 shadow-sm",
+                                                                    showCursors ? "translate-x-6 scale-110" : "translate-x-0"
+                                                                )} />
+                                                            </button>
+                                                        </div>
+                                                    </div>
+
+                                                    <div className="bg-white dark:bg-black/20 border border-black/5 dark:border-white/10 rounded-2xl p-6 backdrop-blur-sm relative overflow-hidden shadow-sm dark:shadow-none">
+                                                        <div className="flex items-center gap-4">
+                                                            <div className="w-12 h-12 rounded-xl bg-black/5 dark:bg-white/10 border border-black/10 dark:border-white/10 flex items-center justify-center">
+                                                                <Users className="text-gray-900 dark:text-white/80" size={24} />
+                                                            </div>
+                                                            <div>
+                                                                <span className="text-gray-900 dark:text-white font-caveat text-xl font-bold block">Participant List</span>
+                                                                <span className="text-gray-500 dark:text-white/40 text-sm flex items-center gap-1">
+                                                                    Hold <kbd className="px-1.5 py-0.5 rounded bg-black/10 dark:bg-white/10 font-mono text-xs font-bold">~</kbd> to view active participants
+                                                                </span>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
+
                                     {activeTab === 'whiteboard' && (
                                         <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300 max-w-2xl">
                                             <div className="bg-white dark:bg-white/5 border border-black/5 dark:border-white/10 rounded-2xl p-6 backdrop-blur-sm shadow-sm dark:shadow-none">
@@ -768,7 +882,6 @@ export function UserSettingsPrompt({ isOpen, onClose, elementCount = 0 }: UserSe
                                                                         const newValue = !debugView
                                                                         setDebugView(newValue)
 
-                                                                        // Jeśli wyłączamy debug view, wyłącz też always show
                                                                         const updates: { debView: boolean; debViewAlw?: boolean } = {
                                                                             debView: newValue
                                                                         }
@@ -988,110 +1101,6 @@ export function UserSettingsPrompt({ isOpen, onClose, elementCount = 0 }: UserSe
                                                             </div>
                                                         </div>
                                                     ))}
-                                                </div>
-                                            </div>
-                                        </div>
-                                    )}
-
-                                    {activeTab === 'collaboration' && (
-                                        <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300 max-w-2xl">
-                                            <div className="bg-white dark:bg-white/5 border border-black/5 dark:border-white/10 rounded-2xl p-6 backdrop-blur-sm shadow-sm dark:shadow-none">
-                                                <h3 className="text-lg font-caveat font-bold text-gray-900 dark:text-white mb-4">Collaboration Settings</h3>
-                                                <div className="space-y-4">
-
-                                                    <div className="bg-white dark:bg-black/20 border border-black/5 dark:border-white/10 rounded-2xl p-6 backdrop-blur-sm relative overflow-hidden shadow-sm dark:shadow-none">
-                                                        <div className="absolute top-0 right-0 p-4 opacity-5">
-                                                            <Users size={100} className="text-gray-900 dark:text-white" />
-                                                        </div>
-                                                        <div className="flex items-center justify-between relative z-10">
-                                                            <div className="flex items-center gap-4">
-                                                                <div className="w-12 h-12 rounded-xl bg-black/5 dark:bg-white/10 border border-black/10 dark:border-white/10 flex items-center justify-center">
-                                                                    <Users className="text-gray-900 dark:text-white/80" size={24} />
-                                                                </div>
-                                                                <div>
-                                                                    <span className="text-gray-900 dark:text-white font-caveat text-xl font-bold block">Real-time Cursors</span>
-                                                                    <span className="text-gray-500 dark:text-white/40 text-sm">Show other users' cursors on the canvas</span>
-                                                                </div>
-                                                            </div>
-                                                            <button
-                                                                onClick={() => setColabCursors(!colabCursors)}
-                                                                className={cn(
-                                                                    "w-14 h-8 rounded-full transition-all duration-300 relative cursor-pointer border-2",
-                                                                    colabCursors
-                                                                        ? "bg-green-500 border-green-400"
-                                                                        : "bg-gray-200 dark:bg-black/40 border-gray-300 dark:border-white/10 hover:border-gray-400 dark:hover:border-white/20"
-                                                                )}
-                                                            >
-                                                                <div className={cn(
-                                                                    "absolute top-1 left-1 w-5 h-5 rounded-full bg-white transition-all duration-300 shadow-sm",
-                                                                    colabCursors ? "translate-x-6 scale-110" : "translate-x-0"
-                                                                )} />
-                                                            </button>
-                                                        </div>
-                                                    </div>
-
-                                                    <div className="bg-white dark:bg-black/20 border border-black/5 dark:border-white/10 rounded-2xl p-6 backdrop-blur-sm relative overflow-hidden shadow-sm dark:shadow-none">
-                                                        <div className="absolute top-0 right-0 p-4 opacity-5">
-                                                            <Shield size={100} className="text-gray-900 dark:text-white" />
-                                                        </div>
-                                                        <div className="flex items-center justify-between relative z-10">
-                                                            <div className="flex items-center gap-4">
-                                                                <div className="w-12 h-12 rounded-xl bg-black/5 dark:bg-white/10 border border-black/10 dark:border-white/10 flex items-center justify-center">
-                                                                    <Shield className="text-gray-900 dark:text-white/80" size={24} />
-                                                                </div>
-                                                                <div>
-                                                                    <span className="text-gray-900 dark:text-white font-caveat text-xl font-bold block">Guest Edit Access</span>
-                                                                    <span className="text-gray-500 dark:text-white/40 text-sm">Allow guests to edit without signing in</span>
-                                                                </div>
-                                                            </div>
-                                                            <button
-                                                                onClick={() => setColabGuestAccess(!colabGuestAccess)}
-                                                                className={cn(
-                                                                    "w-14 h-8 rounded-full transition-all duration-300 relative cursor-pointer border-2",
-                                                                    colabGuestAccess
-                                                                        ? "bg-green-500 border-green-400"
-                                                                        : "bg-gray-200 dark:bg-black/40 border-gray-300 dark:border-white/10 hover:border-gray-400 dark:hover:border-white/20"
-                                                                )}
-                                                            >
-                                                                <div className={cn(
-                                                                    "absolute top-1 left-1 w-5 h-5 rounded-full bg-white transition-all duration-300 shadow-sm",
-                                                                    colabGuestAccess ? "translate-x-6 scale-110" : "translate-x-0"
-                                                                )} />
-                                                            </button>
-                                                        </div>
-                                                    </div>
-
-                                                    <div className="bg-white dark:bg-black/20 border border-black/5 dark:border-white/10 rounded-2xl p-6 backdrop-blur-sm relative overflow-hidden shadow-sm dark:shadow-none">
-                                                        <div className="absolute top-0 right-0 p-4 opacity-5">
-                                                            <UserIcon size={100} className="text-gray-900 dark:text-white" />
-                                                        </div>
-                                                        <div className="flex items-center justify-between relative z-10">
-                                                            <div className="flex items-center gap-4">
-                                                                <div className="w-12 h-12 rounded-xl bg-black/5 dark:bg-white/10 border border-black/10 dark:border-white/10 flex items-center justify-center">
-                                                                    <UserIcon className="text-gray-900 dark:text-white/80" size={24} />
-                                                                </div>
-                                                                <div>
-                                                                    <span className="text-gray-900 dark:text-white font-caveat text-xl font-bold block">Participant List</span>
-                                                                    <span className="text-gray-500 dark:text-white/40 text-sm">Show list of active users in session</span>
-                                                                </div>
-                                                            </div>
-                                                            <button
-                                                                onClick={() => setColabShowParticipants(!colabShowParticipants)}
-                                                                className={cn(
-                                                                    "w-14 h-8 rounded-full transition-all duration-300 relative cursor-pointer border-2",
-                                                                    colabShowParticipants
-                                                                        ? "bg-green-500 border-green-400"
-                                                                        : "bg-gray-200 dark:bg-black/40 border-gray-300 dark:border-white/10 hover:border-gray-400 dark:hover:border-white/20"
-                                                                )}
-                                                            >
-                                                                <div className={cn(
-                                                                    "absolute top-1 left-1 w-5 h-5 rounded-full bg-white transition-all duration-300 shadow-sm",
-                                                                    colabShowParticipants ? "translate-x-6 scale-110" : "translate-x-0"
-                                                                )} />
-                                                            </button>
-                                                        </div>
-                                                    </div>
-
                                                 </div>
                                             </div>
                                         </div>

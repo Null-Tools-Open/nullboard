@@ -6,9 +6,10 @@ interface StopSessionPromptProps {
     isOpen: boolean
     onConfirm: () => void
     onCancel: () => void
+    isHost?: boolean
 }
 
-export function StopSessionPrompt({ isOpen, onConfirm, onCancel }: StopSessionPromptProps) {
+export function StopSessionPrompt({ isOpen, onConfirm, onCancel, isHost = false }: StopSessionPromptProps) {
     return (
         <AnimatePresence>
             {isOpen && (
@@ -27,9 +28,13 @@ export function StopSessionPrompt({ isOpen, onConfirm, onCancel }: StopSessionPr
                         className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[106] bg-white dark:bg-zinc-800 rounded-xl shadow-2xl border border-gray-200 dark:border-zinc-700 p-6 w-96"
                     >
                         <div className="mb-4">
-                            <h3 className="text-lg font-semibold text-gray-900 dark:text-zinc-100 mb-2">Stop Session</h3>
+                            <h3 className="text-lg font-semibold text-gray-900 dark:text-zinc-100 mb-2">
+                                {isHost ? 'End Session' : 'Leave Room'}
+                            </h3>
                             <p className="text-sm text-gray-600 dark:text-zinc-400">
-                                Are you sure you want to stop the session? You will be disconnected from the room but can continue working locally.
+                                {isHost
+                                    ? "Are you sure you want to end the session? Everyone will be disconnected. You can continue working locally."
+                                    : "Are you sure you want to leave? You will be disconnected but can continue working locally."}
                             </p>
                         </div>
                         <div className="flex gap-3 justify-end">
@@ -43,7 +48,7 @@ export function StopSessionPrompt({ isOpen, onConfirm, onCancel }: StopSessionPr
                                 onClick={onConfirm}
                                 className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 transition-colors cursor-pointer"
                             >
-                                Stop Session
+                                {isHost ? 'End Session' : 'Leave Room'}
                             </button>
                         </div>
                     </motion.div>

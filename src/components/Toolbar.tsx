@@ -84,9 +84,10 @@ interface ToolbarProps {
   isLayoutEditing?: boolean
   onPositionChange?: (pos: ToolbarPosition) => void
   onDragPreview?: (pos: ToolbarPosition | null) => void
+  isRestricted?: boolean
 }
 
-export function Toolbar({ selectedTool = 'select', onToolChange, isLocked = false, onLockToggle, position = 'bottom', isLayoutEditing = false, onPositionChange, onDragPreview }: ToolbarProps) {
+export function Toolbar({ selectedTool = 'select', onToolChange, isLocked = false, onLockToggle, position = 'bottom', isLayoutEditing = false, onPositionChange, onDragPreview, isRestricted = false }: ToolbarProps) {
   const [activeTool, setActiveTool] = useState<ToolType>(selectedTool)
   const [isVisible, setIsVisible] = useState(false)
   const [snapKey, setSnapKey] = useState(0)
@@ -102,9 +103,10 @@ export function Toolbar({ selectedTool = 'select', onToolChange, isLocked = fals
 
   const handleToolClick = useCallback((toolId: ToolType) => {
     if (isLocked) return
+    if (isRestricted && toolId !== 'pan') return
     setActiveTool(toolId)
     onToolChange?.(toolId)
-  }, [isLocked, onToolChange])
+  }, [isLocked, isRestricted, onToolChange])
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -158,6 +160,7 @@ export function Toolbar({ selectedTool = 'select', onToolChange, isLocked = fals
       const tool = keyToTool[key]
       if (tool) {
         event.preventDefault()
+        if (isRestricted && tool !== 'pan') return
         handleToolClick(tool)
       }
     }
@@ -329,9 +332,9 @@ export function Toolbar({ selectedTool = 'select', onToolChange, isLocked = fals
                 'relative flex flex-col items-center justify-center w-12 h-12 rounded-xl transition-all duration-200 cursor-pointer',
                 'group',
                 (isActive && shouldUseBackground) || (isMoreTools && (isLaserActive || isLassoActive || isFrameActive || isEmbedActive)) ? 'bg-blue-100 dark:bg-blue-900/30' : '',
-                isLocked && 'opacity-50 cursor-not-allowed'
+                (isLocked || (isRestricted && tool.id !== 'pan')) && 'opacity-50 cursor-not-allowed'
               )}
-              disabled={isLocked}
+              disabled={isLocked || (isRestricted && tool.id !== 'pan')}
               title={
                 isMoreTools ? 'More Tools' :
                   `${tool.label}${tool.shortcut ? ` (${tool.shortcut})` : ''}`

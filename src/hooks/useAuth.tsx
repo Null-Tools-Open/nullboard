@@ -19,6 +19,7 @@ interface User {
   animTurnedOff?: boolean
   debView?: boolean
   debViewAlw?: boolean
+  colabCursors?: boolean
 }
 
 interface AuthContextType {

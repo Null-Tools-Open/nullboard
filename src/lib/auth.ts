@@ -2,7 +2,7 @@ import bcrypt from 'bcryptjs'
 import jwt from 'jsonwebtoken'
 import { cookies } from 'next/headers'
 import { randomUUID } from 'crypto'
-import { nullpassClient } from './nullpass-client'
+import { nullpassClient } from './nullpassClient'
 
 const JWT_SECRET = process.env.JWT_SECRET
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '7d'
@@ -47,6 +47,7 @@ export interface User {
   animTurnedOff?: boolean
   debView?: boolean
   debViewAlw?: boolean
+  colabCursors?: boolean
 }
 
 export async function hashPassword(password: string): Promise<string> {

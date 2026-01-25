@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server'
-import { nullpassClient } from '@/lib/nullpass-client'
+import { nullpassClient } from '@/lib/nullpassClient'
 
 const rateLimitStore = new Map<string, { count: number; resetTime: number }>()
 
