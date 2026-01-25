@@ -1,6 +1,7 @@
 'use client'
 
 import { motion, AnimatePresence } from 'framer-motion'
+import Link from 'next/link'
 import {
     X,
     User as UserIcon,
@@ -501,7 +502,7 @@ export function UserSettingsPrompt({
                                                             <div>
                                                                 <div className="text-gray-900 dark:text-white font-medium text-sm">Two-Factor Authentication</div>
                                                                 <div className="text-gray-500 dark:text-white/40 text-xs mt-0.5">
-                                                                    {user.twoFactorEnabled ? 'Securely enabled via NullPass' : 'Add an extra layer of security'}
+                                                                    {user.twoFactorEnabled ? 'Securely enabled via Null Pass' : 'Add an extra layer of security'}
                                                                 </div>
                                                             </div>
                                                         </div>
@@ -712,28 +713,23 @@ export function UserSettingsPrompt({
                                     {activeTab === 'billing' && (
                                         <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300 max-w-2xl">
                                             <div className="bg-white dark:bg-white/5 border border-black/5 dark:border-white/10 rounded-2xl p-6 backdrop-blur-sm shadow-sm dark:shadow-none">
-                                                <h3 className="text-lg font-caveat font-bold text-gray-900 dark:text-white mb-4">Subscription Plan</h3>
-
                                                 <div className="bg-zinc-100 dark:bg-zinc-900/50 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-6 relative overflow-hidden group">
                                                     <div className="absolute top-0 right-0 p-8 opacity-5 transform translate-x-4 -translate-y-4 group-hover:scale-110 transition-transform duration-500">
                                                         <CreditCard size={120} className="text-black dark:text-white" />
                                                     </div>
 
                                                     <div className="relative z-10">
-                                                        <div className="inline-flex px-3 py-1 rounded-full bg-white dark:bg-white/10 border border-zinc-200 dark:border-white/10 text-xs font-bold uppercase tracking-wider mb-4 text-gray-900 dark:text-white">
-                                                            {user.isPremium ? 'Premium Plan' : 'Free Plan'}
-                                                        </div>
                                                         <div className="text-3xl font-bold font-caveat mb-2 text-gray-900 dark:text-white">
-                                                            {user.isPremium ? 'Pro Membership' : 'Basic Membership'}
+                                                            {user.isPremium ? 'Licensed' : 'No License'}
                                                         </div>
                                                         <p className="text-gray-500 dark:text-zinc-400 text-sm max-w-[80%] mb-6">
                                                             {user.isPremium
                                                                 ? 'You have access to all premium features, unlimited workspaces, and priority support.'
-                                                                : 'Upgrade to Pro to unlock unlimited workspaces, advanced export options, and more.'}
+                                                                : <>Grab a license to unlock unlimited workspaces, advanced export options, and much more! <Link href="/license" className="underline font-medium hover:opacity-60">See More</Link></>}
                                                         </p>
 
                                                         <button className="px-5 py-2.5 bg-gray-900 dark:bg-white text-white dark:text-black rounded-xl font-bold text-sm shadow-sm hover:opacity-90 transition-opacity cursor-pointer">
-                                                            {user.isPremium ? 'Manage Subscription' : 'Upgrade to Pro'}
+                                                            {user.isPremium ? 'Manage Subscription' : 'Grab License!'}
                                                         </button>
                                                     </div>
                                                 </div>
@@ -1105,6 +1101,8 @@ export function UserSettingsPrompt({
                                             </div>
                                         </div>
                                     )}
+
+
 
                                     {activeTab === 'cloud-sync' && (
                                         <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300 max-w-2xl">

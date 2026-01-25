@@ -4,7 +4,12 @@ import { motion } from 'framer-motion'
 import Link from 'next/link'
 import Image from 'next/image'
 import { DiscordIcon, X } from './icons/pack'
-import { Github, Linkedin, ArrowUpRight } from 'lucide-react'
+import { Linkedin, ArrowUpRight } from 'lucide-react'
+import { GitHubIconLight } from './icons/pack'
+
+const GitHubIcon = ({ size, className }: { size?: number; className?: string }) => {
+  return <GitHubIconLight size={size} className={className} />
+}
 
 export function Footer() {
   const footerSections: {
@@ -15,7 +20,6 @@ export function Footer() {
         title: 'Explore',
         links: [
           { name: 'Blog', href: '/blog' },
-          // { name: 'Libraries', href: '/libraries' },
           { name: 'Community', href: '/community' },
           // { name: 'Use Cases', href: '/use-cases' },
           // { name: 'Security & Compliance', href: '/security' },
@@ -30,6 +34,7 @@ export function Footer() {
         links: [
           { name: 'Documentation', href: 'https://docs.nullboard.xyz', external: true },
           { name: 'Features', href: '/features' },
+          // { name: 'Libraries', href: '/libraries' },
           // { name: 'For Teams', href: '/teams' },
           // { name: 'For Education', href: '/education' },
           { name: 'License', href: '/license' },
@@ -46,7 +51,7 @@ export function Footer() {
 
   const socialLinks = [
     { icon: X, href: 'https://x.com/NullToolsXYZ', label: 'X (Twitter)' },
-    { icon: Github, href: 'https://github.com/Null-Tools-Open', label: 'GitHub' },
+    { icon: GitHubIcon, href: 'https://github.com/Null-Tools-Open', label: 'GitHub' },
     { icon: DiscordIcon, href: 'https://discord.gg/7WMZh7jjEB', label: 'Discord' },
   ]
 
