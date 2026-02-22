@@ -143,11 +143,10 @@ export const AuthProvider: FC<AuthProviderProps> = ({ children }) => {
         const data = await response.json()
         setUser(data.user)
       } else {
-        setUser(null)
+        console.warn('Failed to refresh user, keeping existing session')
       }
     } catch (error) {
-      console.error('Failed to refresh user:', error)
-      throw error
+      console.warn('Failed to refresh user:', error)
     }
   }
 

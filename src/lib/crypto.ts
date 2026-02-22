@@ -1,10 +1,10 @@
-const COLLAB_KEY = process.env.NEXT_PUBLIC_ENCRYPTION_KEY || 'default-collab-key'
+const COLLAB_KEY = process.env.NEXT_PUBLIC_ENCRYPTION_KEY || ''
 const COLLAB_SALT = 'nulldrop-collab-v1'
 const LEGACY_SALT = 'nulldrop-salt'
 
 /**
  * Derive encryption key from password using PBKDF2
- */
+*/
 async function deriveKey(password: string, salt: string | Uint8Array = COLLAB_SALT): Promise<CryptoKey> {
   const encoder = new TextEncoder()
   const keyMaterial = await crypto.subtle.importKey(
@@ -32,9 +32,21 @@ async function deriveKey(password: string, salt: string | Uint8Array = COLLAB_SA
 }
 
 /**
+ * Helper: robustly convert Uint8Array to base64 string
+*/
+function uint8ToBase64(arr: Uint8Array): string {
+  let binary = '';
+  const len = arr.byteLength;
+  for (let i = 0; i < len; i++) {
+    binary += String.fromCharCode(arr[i]);
+  }
+  return btoa(binary);
+}
+
+/**
  * Encrypt data for collaboration transport
  * Uses AES-GCM with random IV per encryption
- */
+*/
 export async function encryptData(data: any): Promise<string> {
   try {
     const encoder = new TextEncoder()
@@ -51,7 +63,8 @@ export async function encryptData(data: any): Promise<string> {
     combined.set(iv, 0)
     combined.set(new Uint8Array(encrypted), iv.length)
 
-    return btoa(String.fromCharCode(...combined))
+    return uint8ToBase64(combined)
+
   } catch (error) {
     console.error('Encryption error:', error)
     throw new Error('Failed to encrypt data')
@@ -61,7 +74,7 @@ export async function encryptData(data: any): Promise<string> {
 /**
  * Decrypt collaboration data
  * Supports both new and legacy salt formats
- */
+*/
 export async function decryptData(encryptedData: string): Promise<any> {
   try {
     const decoder = new TextDecoder()
@@ -136,7 +149,7 @@ export async function secureFetch(
 /**
  * Decrypt server-encrypted response
  * Server uses different encryption (Node.js crypto) so we need compatible decryption
- */
+*/
 async function decryptServerResponse(encryptedData: string): Promise<any> {
 
   const combined = Uint8Array.from(atob(encryptedData), c => c.charCodeAt(0))
@@ -181,7 +194,7 @@ async function decryptServerResponse(encryptedData: string): Promise<any> {
  * Use this in API routes (but note this file is for client-side use)
  * 
  * @deprecated Use decryptRequest from api-crypto.ts on server instead
- */
+*/
 export async function decryptRequest(body: any): Promise<any> {
   if (body && body.encrypted && typeof body.encrypted === 'string') {
     return await decryptData(body.encrypted)

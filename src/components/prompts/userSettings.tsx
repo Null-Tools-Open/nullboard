@@ -7,6 +7,7 @@ import {
     User as UserIcon,
     LogOut,
     Shield,
+    Braces,
     Key,
     EyeOff,
     Smartphone,
@@ -31,7 +32,13 @@ import {
     ThumbsUp,
     Type,
     Brush,
-    MousePointer2
+    MousePointer2,
+    AlertTriangle,
+    FileText,
+    ExternalLink,
+    UserX,
+    Eye,
+    Copy
 } from 'lucide-react'
 
 import { useWorkspaces } from '@/hooks/useWorkspaces'
@@ -42,6 +49,9 @@ import { useAuth } from '@/hooks/useAuth'
 import { useTheme } from '@/hooks/useTheme'
 import { secureFetch } from '@/lib/crypto'
 import { useDebugger } from '@/contexts/debuggerContext'
+import toast from 'react-hot-toast'
+import { BetaBadge } from '@/components/ui/beta'
+import { BoardBadges } from '@/components/ui/boardBadges'
 
 interface UserSettingsPromptProps {
     isOpen: boolean
@@ -97,6 +107,21 @@ export function UserSettingsPrompt({
     const [colabShowParticipants, setColabShowParticipants] = useState(true)
     const { debugView, setDebugView, debViewAlw, setDebViewAlw } = useDebugger()
     const [disableAnimations, setDisableAnimations] = useState(user?.animTurnedOff || false)
+    const [isRequestingData, setIsRequestingData] = useState(false)
+    const [showDeleteAccountModal, setShowDeleteAccountModal] = useState(false)
+    const [isDeletingAccount, setIsDeletingAccount] = useState(false)
+    const [deletePassword, setDeletePassword] = useState('')
+    const [deleteVerificationCode, setDeleteVerificationCode] = useState('')
+    const [showDisableAccountModal, setShowDisableAccountModal] = useState(false)
+    const [isDisablingAccount, setIsDisablingAccount] = useState(false)
+
+    const [apiKeys, setApiKeys] = useState<{ id: string, name: string, key: string, createdAt: string }[]>([])
+    const [isLoadingKeys, setIsLoadingKeys] = useState(false)
+    const [isCreatingKey, setIsCreatingKey] = useState(false)
+    const [newKeyName, setNewKeyName] = useState('')
+    const [editingKeyId, setEditingKeyId] = useState<string | null>(null)
+    const [editKeyName, setEditKeyName] = useState('')
+    const [revealedKeys, setRevealedKeys] = useState<Set<string>>(new Set())
 
     const fileInputRef = useRef<HTMLInputElement>(null)
 
@@ -109,8 +134,25 @@ export function UserSettingsPrompt({
     } = useWorkspaces()
 
     useEffect(() => {
+
+        if (activeTab === 'developer' && activeWorkspaceId) {
+            setIsLoadingKeys(true)
+            secureFetch(`/api/user/keys?workspaceId=${activeWorkspaceId}`)
+                .then(res => res.json())
+                .then(data => {
+                    if (data.keys) setApiKeys(data.keys)
+                })
+                .catch(err => console.error('Failed to load keys', err))
+                .finally(() => setIsLoadingKeys(false))
+        }
+    }, [activeTab, activeWorkspaceId])
+
+    useEffect(() => {
         if (user) {
             setDisplayName(user.name || '')
+            setPrivacyMode(user.userHideProfileInfo || false)
+            setCloudSyncEnabled(user.cloudSyncEnabled || false)
+            setDisableAnimations(user.animTurnedOff || false)
         }
     }, [user])
 
@@ -191,6 +233,7 @@ export function UserSettingsPrompt({
             items: [
                 { id: 'manage-workspaces', label: 'Workspaces', icon: FolderOpen },
                 { id: 'collaboration', label: 'Collaboration', icon: Users },
+                { id: 'developer', label: 'Integrations', icon: Braces },
                 { id: 'whiteboard', label: 'Whiteboard', icon: Layout },
                 { id: 'cloud-sync', label: 'Cloud Sync', icon: Cloud }
             ]
@@ -259,9 +302,12 @@ export function UserSettingsPrompt({
                                             </div>
                                         )}
                                     </div>
-                                    <div className="flex flex-col overflow-hidden">
-                                        <span className={cn("text-base font-caveat font-bold text-gray-900 dark:text-white leading-tight mb-0.5 truncate", privacyMode && "blur-[5px] select-none")}>{user.name || 'User'}</span>
-                                        <button onClick={startEditing} className="text-xs text-gray-500 hover:text-gray-900 dark:text-white/40 dark:hover:text-white/70 cursor-pointer transition-colors text-left">Edit Profile</button>
+                                    <div className="flex flex-col min-w-0">
+                                        <div className="flex items-center gap-1.5 mb-0.5">
+                                            <span className={cn("text-base font-caveat font-bold text-gray-900 dark:text-white leading-tight", !privacyMode && "truncate", privacyMode && "inline-block blur-[3px] select-none opacity-80 scale-105")}>{user.name || 'User'}</span>
+                                            {!privacyMode && <BoardBadges isTeam={user.isNullBoardTeam} role={user.nullBoardTeamRole} />}
+                                        </div>
+                                        <button onClick={startEditing} className="text-xs text-gray-500 hover:text-gray-900 dark:text-white/40 dark:hover:text-white/70 cursor-pointer transition-colors text-left relative z-10">Edit Profile</button>
                                     </div>
                                 </div>
 
@@ -381,8 +427,11 @@ export function UserSettingsPrompt({
                                                                     </div>
                                                                 ) : (
                                                                     <div>
-                                                                        <h2 className={cn("text-2xl font-bold text-gray-900 dark:text-white font-caveat", privacyMode && "blur-[6px] select-none")}>{user.name || 'User'}</h2>
-                                                                        <p className={cn("text-gray-500 dark:text-white/40 text-sm mt-0.5 font-mono", privacyMode && "blur-[5px] select-none")}>{user.email}</p>
+                                                                        <div className="flex items-center gap-2">
+                                                                            <h2 className={cn("text-2xl font-bold text-gray-900 dark:text-white font-caveat", privacyMode && "inline-block blur-[4px] select-none opacity-80 scale-105")}>{user.name || 'User'}</h2>
+                                                                            {!privacyMode && <BoardBadges isTeam={user.isNullBoardTeam} role={user.nullBoardTeamRole} className="scale-110 ml-1" />}
+                                                                        </div>
+                                                                        <p className={cn("text-gray-500 dark:text-white/40 text-sm mt-0.5 font-mono", privacyMode && "inline-block blur-[3px] select-none opacity-80 scale-105")}>{user.email}</p>
                                                                         <button
                                                                             onClick={startEditing}
                                                                             className="mt-3 text-xs text-blue-500 dark:text-blue-400 hover:text-blue-600 dark:hover:text-blue-300 cursor-pointer font-medium flex items-center gap-1"
@@ -404,9 +453,9 @@ export function UserSettingsPrompt({
                                                         <div className="flex justify-between items-center group">
                                                             <div>
                                                                 <div className="text-xs font-bold text-gray-500 dark:text-white/30 uppercase mb-1">Email</div>
-                                                                <div className={cn("text-gray-900 dark:text-white/80 font-mono text-sm", privacyMode && "blur-[5px] select-none")}>
+                                                                <div className={cn("text-gray-900 dark:text-white/80 font-mono text-sm", privacyMode && "inline-block blur-[3px] select-none opacity-80 scale-105")}>
                                                                     {showEmail ? user.email : user.email.replace(/(.{2})(.*)(@.*)/, '$1***$3')}
-                                                                    <span className="ml-2 text-xs text-blue-500 dark:text-blue-400 cursor-pointer hover:text-blue-600 dark:hover:text-blue-300" onClick={() => setShowEmail(!showEmail)}>{showEmail ? 'Hide' : 'Reveal'}</span>
+                                                                    <span className="ml-2 text-xs text-blue-500 dark:text-blue-400 cursor-pointer hover:text-blue-600 dark:hover:text-blue-300 relative z-10" onClick={() => setShowEmail(!showEmail)}>{showEmail ? 'Hide' : 'Reveal'}</span>
                                                                 </div>
                                                             </div>
                                                         </div>
@@ -524,6 +573,295 @@ export function UserSettingsPrompt({
                                                     </div>
                                                 </div>
                                             </div>
+
+                                            <div className="bg-white dark:bg-white/5 border border-black/5 dark:border-white/10 rounded-2xl p-6 backdrop-blur-sm shadow-sm dark:shadow-none">
+                                                <h3 className="text-lg font-caveat font-bold text-gray-900 dark:text-white mb-4">Privacy and Data</h3>
+                                                <div className="space-y-4">
+                                                    <div className="flex items-center justify-between">
+                                                        <div className="flex items-center gap-4">
+                                                            <div className="w-10 h-10 rounded-xl bg-black/5 dark:bg-white/10 flex items-center justify-center border border-black/10 dark:border-white/10">
+                                                                <Box className="text-gray-900 dark:text-white" size={20} />
+                                                            </div>
+                                                            <div>
+                                                                <div className="text-gray-900 dark:text-white font-medium text-sm">Request My Data</div>
+                                                                <div className="text-gray-500 dark:text-white/40 text-xs mt-0.5">
+                                                                    Request a copy of all your data
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                        <button
+                                                            onClick={async () => {
+                                                                if (isRequestingData) return
+                                                                setIsRequestingData(true)
+                                                                try {
+                                                                    const response = await secureFetch('/api/user/request-data', {
+                                                                        method: 'POST'
+                                                                    })
+                                                                    const data = await response.json().catch(() => ({}))
+                                                                    if (response.ok) {
+                                                                        toast.success('Your data request has been submitted. You will receive your data export shortly.')
+                                                                    } else {
+                                                                        throw new Error(data.error || 'Failed to request data')
+                                                                    }
+                                                                } catch (err: any) {
+                                                                    console.error('Failed to request data', err)
+                                                                    toast.error(err.message || 'Failed to request your data. Please try again later.')
+                                                                } finally {
+                                                                    setIsRequestingData(false)
+                                                                }
+                                                            }}
+                                                            disabled={isRequestingData}
+                                                            className="px-4 py-2 bg-gray-100 dark:bg-white/5 hover:bg-gray-200 dark:hover:bg-white/10 text-gray-900 dark:text-white text-sm font-medium rounded-xl transition-colors cursor-pointer border border-black/5 dark:border-white/10 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                                                        >
+                                                            {isRequestingData ? (
+                                                                <>
+                                                                    <Loader2 size={14} className="animate-spin" />
+                                                                    Requesting...
+                                                                </>
+                                                            ) : (
+                                                                'Request My Data'
+                                                            )}
+                                                        </button>
+                                                    </div>
+
+                                                    <div className="w-full h-px bg-black/5 dark:bg-white/5 my-4" />
+
+                                                    <div className="flex items-center justify-between">
+                                                        <div className="flex items-center gap-4">
+                                                            <div className="w-10 h-10 rounded-xl bg-black/5 dark:bg-white/10 flex items-center justify-center border border-black/10 dark:border-white/10">
+                                                                <UserX className="text-gray-900 dark:text-white" size={20} />
+                                                            </div>
+                                                            <div>
+                                                                <div className="text-gray-900 dark:text-white font-medium text-sm">Disable Account</div>
+                                                                <div className="text-gray-500 dark:text-white/40 text-xs mt-0.5">
+                                                                    Temporarily disable your account (can be re-enabled)
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                        <button
+                                                            onClick={() => setShowDisableAccountModal(true)}
+                                                            className="px-4 py-2 bg-yellow-500/10 hover:bg-yellow-500/20 text-yellow-700 dark:text-yellow-400 text-sm font-medium rounded-xl transition-colors cursor-pointer border border-yellow-500/20 flex items-center gap-2"
+                                                        >
+                                                            <UserX size={14} />
+                                                            Disable Account
+                                                        </button>
+                                                    </div>
+
+                                                    <div className="w-full h-px bg-black/5 dark:bg-white/5 my-4" />
+
+                                                    <div className="flex items-center justify-between">
+                                                        <div className="flex items-center gap-4">
+                                                            <div className="w-10 h-10 rounded-xl bg-black/5 dark:bg-white/10 flex items-center justify-center border border-black/10 dark:border-white/10">
+                                                                <Trash2 className="text-gray-900 dark:text-white" size={20} />
+                                                            </div>
+                                                            <div>
+                                                                <div className="text-gray-900 dark:text-white font-medium text-sm">Delete Account</div>
+                                                                <div className="text-gray-500 dark:text-white/40 text-xs mt-0.5">
+                                                                    Permanently delete your account and all data
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                        <button
+                                                            onClick={() => setShowDeleteAccountModal(true)}
+                                                            className="px-4 py-2 bg-red-500/10 hover:bg-red-500/20 text-red-600 dark:text-red-400 text-sm font-medium rounded-xl transition-colors cursor-pointer border border-red-500/20 flex items-center gap-2"
+                                                        >
+                                                            <Trash2 size={14} />
+                                                            Delete Account
+                                                        </button>
+                                                    </div>
+
+                                                    <div className="w-full h-px bg-black/5 dark:bg-white/5 my-4" />
+
+                                                    <div className="space-y-3">
+                                                        <div className="flex items-center gap-3">
+                                                            <FileText className="text-gray-500 dark:text-white/40" size={16} />
+                                                            <Link
+                                                                href="/privacy"
+                                                                target="_blank"
+                                                                className="text-sm text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1"
+                                                            >
+                                                                Privacy Policy
+                                                                <ExternalLink size={12} />
+                                                            </Link>
+                                                        </div>
+                                                        <div className="flex items-center gap-3">
+                                                            <FileText className="text-gray-500 dark:text-white/40" size={16} />
+                                                            <Link
+                                                                href="/terms"
+                                                                target="_blank"
+                                                                className="text-sm text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1"
+                                                            >
+                                                                Terms of Service
+                                                                <ExternalLink size={12} />
+                                                            </Link>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <AnimatePresence>
+                                                {showDisableAccountModal && (
+                                                    <>
+                                                        <motion.div
+                                                            initial={{ opacity: 0 }}
+                                                            animate={{ opacity: 1 }}
+                                                            exit={{ opacity: 0 }}
+                                                            onClick={() => setShowDisableAccountModal(false)}
+                                                            className="fixed inset-0 bg-black/50 z-[100]"
+                                                        />
+                                                        <motion.div
+                                                            initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                                                            animate={{ opacity: 1, scale: 1, y: 0 }}
+                                                            exit={{ opacity: 0, scale: 0.95, y: 20 }}
+                                                            className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[101] bg-white dark:bg-zinc-800 rounded-xl shadow-2xl border border-gray-200 dark:border-zinc-700 p-6 w-full max-w-md"
+                                                        >
+                                                            <div className="mb-4">
+                                                                <div className="flex items-center gap-3 mb-3">
+                                                                    <AlertTriangle className="text-yellow-600 dark:text-yellow-400" size={24} />
+                                                                    <h3 className="text-lg font-semibold text-gray-900 dark:text-zinc-100">Disable Account</h3>
+                                                                </div>
+                                                                <p className="text-sm text-gray-600 dark:text-zinc-400 mb-4">
+                                                                    Disabling your account will temporarily prevent you from accessing Null Board. Your data will be preserved and you can re-enable your account at any time through Null Pass.
+                                                                </p>
+                                                                <p className="text-xs text-gray-500 dark:text-zinc-500 mb-4">
+                                                                    To disable your account, please visit Null Pass and disable it from your account settings.
+                                                                </p>
+                                                            </div>
+                                                            <div className="flex gap-3 justify-end">
+                                                                <button
+                                                                    onClick={() => setShowDisableAccountModal(false)}
+                                                                    className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-zinc-300 bg-gray-100 dark:bg-zinc-700 rounded-lg hover:bg-gray-200 dark:hover:bg-zinc-600 transition-colors cursor-pointer"
+                                                                >
+                                                                    Cancel
+                                                                </button>
+                                                                <a
+                                                                    href={process.env.NEXT_PUBLIC_NULLPASS_URL || "https://auth.nullpass.xyz"}
+                                                                    target="_blank"
+                                                                    rel="noopener noreferrer"
+                                                                    className="px-4 py-2 text-sm font-medium text-white bg-yellow-600 rounded-lg hover:bg-yellow-700 transition-colors cursor-pointer flex items-center gap-2"
+                                                                >
+                                                                    <ExternalLink size={14} />
+                                                                    Go to Null Pass
+                                                                </a>
+                                                            </div>
+                                                        </motion.div>
+                                                    </>
+                                                )}
+                                            </AnimatePresence>
+
+                                            <AnimatePresence>
+                                                {showDeleteAccountModal && (
+                                                    <>
+                                                        <motion.div
+                                                            initial={{ opacity: 0 }}
+                                                            animate={{ opacity: 1 }}
+                                                            exit={{ opacity: 0 }}
+                                                            onClick={() => setShowDeleteAccountModal(false)}
+                                                            className="fixed inset-0 bg-black/50 z-[100]"
+                                                        />
+                                                        <motion.div
+                                                            initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                                                            animate={{ opacity: 1, scale: 1, y: 0 }}
+                                                            exit={{ opacity: 0, scale: 0.95, y: 20 }}
+                                                            className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[101] bg-white dark:bg-zinc-800 rounded-xl shadow-2xl border border-gray-200 dark:border-zinc-700 p-6 w-full max-w-md"
+                                                        >
+                                                            <div className="mb-4">
+                                                                <div className="flex items-center gap-3 mb-3">
+                                                                    <AlertTriangle className="text-red-600 dark:text-red-400" size={24} />
+                                                                    <h3 className="text-lg font-semibold text-gray-900 dark:text-zinc-100">Delete Account</h3>
+                                                                </div>
+                                                                <p className="text-sm text-gray-600 dark:text-zinc-400 mb-4">
+                                                                    This action cannot be undone. This will permanently delete your account, all your workspaces, and all associated data from Null Board and Null Pass.
+                                                                </p>
+                                                                <div className="space-y-3">
+                                                                    <div>
+                                                                        <label className="block text-xs font-medium text-gray-700 dark:text-zinc-300 mb-1">
+                                                                            Password
+                                                                        </label>
+                                                                        <input
+                                                                            type="password"
+                                                                            value={deletePassword}
+                                                                            onChange={(e) => setDeletePassword(e.target.value)}
+                                                                            placeholder="Enter your password"
+                                                                            className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-700 text-gray-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-red-500"
+                                                                        />
+                                                                    </div>
+                                                                    {user?.twoFactorEnabled && (
+                                                                        <div>
+                                                                            <label className="block text-xs font-medium text-gray-700 dark:text-zinc-300 mb-1">
+                                                                                2FA Verification Code
+                                                                            </label>
+                                                                            <input
+                                                                                type="text"
+                                                                                value={deleteVerificationCode}
+                                                                                onChange={(e) => setDeleteVerificationCode(e.target.value)}
+                                                                                placeholder="Enter 2FA code"
+                                                                                className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-700 text-gray-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-red-500"
+                                                                            />
+                                                                        </div>
+                                                                    )}
+                                                                </div>
+                                                            </div>
+                                                            <div className="flex gap-3 justify-end">
+                                                                <button
+                                                                    onClick={() => {
+                                                                        setShowDeleteAccountModal(false)
+                                                                        setDeletePassword('')
+                                                                        setDeleteVerificationCode('')
+                                                                    }}
+                                                                    disabled={isDeletingAccount}
+                                                                    className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-zinc-300 bg-gray-100 dark:bg-zinc-700 rounded-lg hover:bg-gray-200 dark:hover:bg-zinc-600 transition-colors cursor-pointer disabled:opacity-50"
+                                                                >
+                                                                    Cancel
+                                                                </button>
+                                                                <button
+                                                                    onClick={async () => {
+                                                                        if (!deletePassword) {
+                                                                            toast.error('Password is required')
+                                                                            return
+                                                                        }
+                                                                        setIsDeletingAccount(true)
+                                                                        try {
+                                                                            const response = await secureFetch('/api/auth/delete-account', {
+                                                                                method: 'POST',
+                                                                                body: JSON.stringify({
+                                                                                    password: deletePassword,
+                                                                                    verificationCode: user?.twoFactorEnabled ? deleteVerificationCode : undefined
+                                                                                })
+                                                                            })
+                                                                            if (response.ok) {
+                                                                                toast.success('Account deleted successfully')
+                                                                                setTimeout(() => {
+                                                                                    window.location.href = '/'
+                                                                                }, 1000)
+                                                                            } else {
+                                                                                const data = await response.json()
+                                                                                throw new Error(data.error || 'Failed to delete account')
+                                                                            }
+                                                                        } catch (err: any) {
+                                                                            console.error('Failed to delete account', err)
+                                                                            toast.error(err.message || 'Failed to delete account. Please try again.')
+                                                                        } finally {
+                                                                            setIsDeletingAccount(false)
+                                                                        }
+                                                                    }}
+                                                                    disabled={isDeletingAccount || !deletePassword}
+                                                                    className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                                                                >
+                                                                    {isDeletingAccount ? (
+                                                                        <>
+                                                                            <Loader2 size={14} className="animate-spin" />
+                                                                            Deleting...
+                                                                        </>
+                                                                    ) : (
+                                                                        'Delete Account'
+                                                                    )}
+                                                                </button>
+                                                            </div>
+                                                        </motion.div>
+                                                    </>
+                                                )}
+                                            </AnimatePresence>
                                         </div>
                                     )}
 
@@ -964,6 +1302,269 @@ export function UserSettingsPrompt({
                                         </div>
                                     )}
 
+                                    {activeTab === 'developer' && (
+                                        <>
+                                            <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300 max-w-2xl">
+                                                <div className="bg-white dark:bg-white/5 border border-black/5 dark:border-white/10 rounded-2xl p-6 backdrop-blur-sm shadow-sm dark:shadow-none">
+                                                    <div className="flex items-center justify-between mb-6">
+                                                        <div>
+                                                            <h3 className="text-lg font-caveat font-bold text-gray-900 dark:text-white">API Keys</h3>
+                                                            <p className="text-sm text-gray-500 dark:text-white/40">Manage Developer API keys for this workspace</p>
+                                                        </div>
+                                                        <div className="flex items-center gap-3">
+                                                            {isCreatingKey ? (
+                                                                <div className="flex items-center gap-2 animate-in fade-in slide-in-from-right-2 duration-200">
+                                                                    <input
+                                                                        autoFocus
+                                                                        type="text"
+                                                                        placeholder="Key Name"
+                                                                        value={newKeyName}
+                                                                        onChange={(e) => setNewKeyName(e.target.value)}
+                                                                        onKeyDown={(e) => {
+                                                                            if (e.key === 'Enter' && newKeyName.trim()) {
+                                                                                setIsCreatingKey(false)
+                                                                                secureFetch(`/api/user/keys/create`, {
+                                                                                    method: 'POST',
+                                                                                    body: JSON.stringify({ name: newKeyName.trim(), workspaceId: activeWorkspaceId })
+                                                                                }).then(res => res.json()).then(data => {
+                                                                                    if (data.key) setApiKeys([data.key, ...apiKeys])
+                                                                                })
+                                                                                setNewKeyName('')
+                                                                            }
+                                                                            if (e.key === 'Escape') {
+                                                                                setIsCreatingKey(false)
+                                                                                setNewKeyName('')
+                                                                            }
+                                                                        }}
+                                                                        className="w-40 h-8 px-3 text-xs bg-gray-50 dark:bg-black/20 border border-gray-200 dark:border-white/10 rounded-lg focus:outline-none focus:ring-2 focus:ring-black dark:focus:ring-white transition-all text-gray-900 dark:text-white"
+                                                                    />
+                                                                    <button
+                                                                        onClick={() => {
+                                                                            if (newKeyName.trim()) {
+                                                                                setIsCreatingKey(false)
+                                                                                secureFetch(`/api/user/keys/create`, {
+                                                                                    method: 'POST',
+                                                                                    body: JSON.stringify({ name: newKeyName.trim(), workspaceId: activeWorkspaceId })
+                                                                                }).then(res => res.json()).then(data => {
+                                                                                    if (data.key) setApiKeys([data.key, ...apiKeys])
+                                                                                })
+                                                                                setNewKeyName('')
+                                                                            }
+                                                                        }}
+                                                                        disabled={!newKeyName.trim()}
+                                                                        className="h-8 px-3 bg-black dark:bg-white text-white dark:text-black rounded-lg text-xs font-bold hover:opacity-90 transition-opacity disabled:opacity-50 cursor-pointer"
+                                                                    >
+                                                                        Add
+                                                                    </button>
+                                                                    <button
+                                                                        onClick={() => {
+                                                                            setIsCreatingKey(false)
+                                                                            setNewKeyName('')
+                                                                        }}
+                                                                        className="h-8 w-8 flex items-center justify-center bg-gray-100 dark:bg-white/10 text-gray-500 dark:text-white/60 rounded-lg hover:bg-gray-200 dark:hover:bg-white/20 transition-colors cursor-pointer"
+                                                                    >
+                                                                        <X size={14} />
+                                                                    </button>
+                                                                </div>
+                                                            ) : (
+                                                                <button
+                                                                    onClick={() => setIsCreatingKey(true)}
+                                                                    className="flex items-center gap-2 px-3 py-1.5 bg-gray-900 dark:bg-white text-white dark:text-black rounded-lg text-xs font-bold hover:opacity-90 transition-opacity cursor-pointer"
+                                                                >
+                                                                    <Plus size={14} />
+                                                                    <span>Create Key</span>
+                                                                </button>
+                                                            )}
+                                                        </div>
+                                                    </div>
+
+                                                    <div className="space-y-3 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
+                                                        {isLoadingKeys ? (
+                                                            <div className="flex justify-center py-8">
+                                                                <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
+                                                            </div>
+                                                        ) : apiKeys.length === 0 ? (
+                                                            <div className="text-center py-8 text-sm text-gray-500 dark:text-white/40">
+                                                                No API keys found for this workspace.
+                                                            </div>
+                                                        ) : (
+                                                            apiKeys.map((apiKey) => (
+                                                                <div
+                                                                    key={apiKey.id}
+                                                                    className="group flex flex-col gap-3 p-4 rounded-xl border transition-all duration-200 bg-gray-50 dark:bg-black/20 border-black/5 dark:border-white/5 hover:border-black/10 dark:hover:border-white/10"
+                                                                >
+                                                                    <div className="flex items-center justify-between">
+                                                                        <div className="flex items-center gap-4">
+                                                                            <div>
+                                                                                {editingKeyId === apiKey.id ? (
+                                                                                    <input
+                                                                                        autoFocus
+                                                                                        type="text"
+                                                                                        value={editKeyName}
+                                                                                        onChange={(e) => setEditKeyName(e.target.value)}
+                                                                                        onKeyDown={(e) => {
+                                                                                            if (e.key === 'Enter' && editKeyName.trim()) {
+                                                                                                setEditingKeyId(null)
+                                                                                                secureFetch(`/api/user/keys/edit`, {
+                                                                                                    method: 'PATCH',
+                                                                                                    body: JSON.stringify({ keyId: apiKey.id, name: editKeyName.trim() })
+                                                                                                }).then(() => {
+                                                                                                    setApiKeys(apiKeys.map(k => k.id === apiKey.id ? { ...k, name: editKeyName.trim() } : k))
+                                                                                                })
+                                                                                            }
+                                                                                            if (e.key === 'Escape') setEditingKeyId(null)
+                                                                                        }}
+                                                                                        onBlur={() => {
+                                                                                            if (editKeyName.trim() && editKeyName !== apiKey.name) {
+                                                                                                secureFetch(`/api/user/keys/edit`, {
+                                                                                                    method: 'PATCH',
+                                                                                                    body: JSON.stringify({ keyId: apiKey.id, name: editKeyName.trim() })
+                                                                                                }).then(() => {
+                                                                                                    setApiKeys(apiKeys.map(k => k.id === apiKey.id ? { ...k, name: editKeyName.trim() } : k))
+                                                                                                })
+                                                                                            }
+                                                                                            setEditingKeyId(null)
+                                                                                        }}
+                                                                                        className="font-bold text-sm bg-transparent border-b border-black/20 dark:border-white/20 focus:outline-none focus:border-black dark:focus:border-white text-gray-900 dark:text-white"
+                                                                                    />
+                                                                                ) : (
+                                                                                    <div
+                                                                                        className="font-bold text-sm text-gray-900 dark:text-white cursor-pointer hover:underline"
+                                                                                        onClick={() => {
+                                                                                            setEditingKeyId(apiKey.id)
+                                                                                            setEditKeyName(apiKey.name)
+                                                                                        }}
+                                                                                        title="Click to rename"
+                                                                                    >
+                                                                                        {apiKey.name}
+                                                                                    </div>
+                                                                                )}
+                                                                                <div className="text-xs text-gray-500 dark:text-white/40 mt-0.5">
+                                                                                    Created {new Date(apiKey.createdAt).toLocaleDateString()}
+                                                                                </div>
+                                                                            </div>
+                                                                        </div>
+
+                                                                        <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                                            <button
+                                                                                onClick={() => {
+                                                                                    setApiKeys(apiKeys.filter(k => k.id !== apiKey.id))
+                                                                                    secureFetch(`/api/user/keys/delete?keyId=${apiKey.id}`, { method: 'DELETE' })
+                                                                                        .catch(() => toast.error('Failed to delete API key'))
+                                                                                }}
+                                                                                className="p-2 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-lg text-gray-400 dark:text-white/20 hover:text-red-600 dark:hover:text-red-400 transition-colors cursor-pointer"
+                                                                                title="Delete key"
+                                                                            >
+                                                                                <Trash2 size={16} />
+                                                                            </button>
+                                                                        </div>
+                                                                    </div>
+                                                                    <div className="mt-2 flex items-center gap-2">
+                                                                        <div className="flex-1 bg-black/5 dark:bg-black/40 rounded-lg p-3 border border-black/5 dark:border-white/5 font-mono text-xs text-gray-600 dark:text-gray-300 break-all select-all">
+                                                                            {revealedKeys.has(apiKey.id) ? apiKey.key : 'nb_' + '•'.repeat(40)}
+                                                                        </div>
+                                                                        <button
+                                                                            onClick={() => {
+                                                                                const newSet = new Set(revealedKeys)
+                                                                                if (revealedKeys.has(apiKey.id)) {
+                                                                                    newSet.delete(apiKey.id)
+                                                                                } else {
+                                                                                    newSet.add(apiKey.id)
+                                                                                }
+                                                                                setRevealedKeys(newSet)
+                                                                            }}
+                                                                            className="p-2 hover:bg-black/5 dark:hover:bg-white/10 rounded-lg text-gray-500 dark:text-white/40 hover:text-gray-900 dark:hover:text-white transition-colors cursor-pointer flex-shrink-0"
+                                                                            title={revealedKeys.has(apiKey.id) ? "Hide key" : "Reveal key"}
+                                                                        >
+                                                                            {revealedKeys.has(apiKey.id) ? <EyeOff size={16} /> : <Eye size={16} />}
+                                                                        </button>
+                                                                        <button
+                                                                            onClick={() => {
+                                                                                navigator.clipboard.writeText(apiKey.key)
+                                                                                toast.success('API key copied to clipboard')
+                                                                            }}
+                                                                            className="p-2 hover:bg-black/5 dark:hover:bg-white/10 rounded-lg text-gray-500 dark:text-white/40 hover:text-gray-900 dark:hover:text-white transition-colors cursor-pointer flex-shrink-0"
+                                                                            title="Copy key"
+                                                                        >
+                                                                            <Copy size={16} />
+                                                                        </button>
+                                                                    </div>
+                                                                </div>
+                                                            ))
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300 max-w-2xl mt-6">
+                                                <div className="bg-white dark:bg-white/5 border border-black/5 dark:border-white/10 rounded-2xl p-6 backdrop-blur-sm shadow-sm dark:shadow-none">
+                                                    <div className="flex items-center justify-between mb-6">
+                                                        <div>
+                                                            <h3 className="text-lg font-caveat font-bold text-gray-900 dark:text-white">Integrations</h3>
+                                                            <p className="text-sm text-gray-500 dark:text-white/40">Manage your developer settings.</p>
+                                                        </div>
+                                                    </div>
+                                                    <div className="space-y-4">
+                                                        <div className="group flex flex-col p-5 rounded-[1.5rem] border border-black/5 dark:border-white/5 bg-gray-50 dark:bg-black/20 hover:border-black/10 dark:hover:border-white/10 transition-all duration-200">
+                                                            <div className="flex items-center gap-4 mb-3">
+                                                                <div className="w-12 h-12 rounded-xl bg-white dark:bg-white/5 border border-black/5 dark:border-white/5 flex items-center justify-center text-gray-900 dark:text-white shadow-sm">
+                                                                    <Layout size={24} />
+                                                                </div>
+                                                                <div>
+                                                                    <div className="flex items-center gap-2 mb-1">
+                                                                        <div className="font-bold text-base text-gray-900 dark:text-white">Iframe Support</div>
+                                                                        <BetaBadge text="BETA" />
+                                                                    </div>
+                                                                    <p className="text-xs text-gray-500 dark:text-white/40">
+                                                                        Embed Null Board seamlessly into your application's frontend.
+                                                                    </p>
+                                                                </div>
+                                                            </div>
+                                                            <div className="mt-2 flex items-center gap-2 bg-black/5 dark:bg-black/40 rounded-xl p-3 border border-black/5 dark:border-white/5 overflow-hidden">
+                                                                <code className="flex-1 text-xs font-mono text-gray-600 dark:text-gray-300 truncate">
+                                                                    {`<iframe src="${typeof window !== 'undefined' ? window.location.origin : 'https://nullboard.com'}" width="100%" height="100%" frameborder="0"></iframe>`}
+                                                                </code>
+                                                                <button
+                                                                    onClick={() => {
+                                                                        const origin = typeof window !== 'undefined' ? window.location.origin : 'https://nullboard.com'
+                                                                        navigator.clipboard.writeText(`<iframe src="${origin}" width="100%" height="100%" frameborder="0"></iframe>`)
+                                                                        toast.success('Iframe snippet copied')
+                                                                    }}
+                                                                    className="p-2 hover:bg-black/5 dark:hover:bg-white/10 rounded-lg text-gray-500 dark:text-white/40 hover:text-gray-900 dark:hover:text-white transition-colors cursor-pointer flex-shrink-0"
+                                                                    title="Copy snippet"
+                                                                >
+                                                                    <Copy size={16} />
+                                                                </button>
+                                                            </div>
+                                                        </div>
+
+                                                        <div className="group flex flex-col p-5 rounded-[1.5rem] border border-black/5 dark:border-white/5 bg-gray-50 dark:bg-black/20 hover:border-black/10 dark:hover:border-white/10 transition-all duration-200 relative overflow-hidden">
+                                                            <div className="absolute top-0 right-0 p-6 opacity-5 pointer-events-none">
+                                                                <Box size={100} className="text-gray-900 dark:text-white" />
+                                                            </div>
+                                                            <div className="relative z-10 flex flex-col">
+                                                                <div className="flex items-center gap-4 mb-3">
+                                                                    <div className="w-12 h-12 rounded-xl bg-white dark:bg-white/5 border border-black/5 dark:border-white/5 flex items-center justify-center text-gray-900 dark:text-white shadow-sm">
+                                                                        <Box size={24} />
+                                                                    </div>
+                                                                    <div>
+                                                                        <div className="flex items-center gap-3">
+                                                                            <div className="font-bold text-base text-gray-900 dark:text-white">Official SDK</div>
+                                                                            <BetaBadge text="BETA" />
+                                                                        </div>
+                                                                        <p className="text-xs text-gray-500 dark:text-white/40 mt-1">
+                                                                            Powerful SDKs for Node.js, React, and Python to build dynamic integrations directly to our core infrastructure. Coming soon to all workspaces.
+                                                                        </p>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </>
+                                    )}
+
                                     {activeTab === 'manage-workspaces' && (
                                         <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300 max-w-2xl">
                                             <div className="bg-white dark:bg-white/5 border border-black/5 dark:border-white/10 rounded-2xl p-6 backdrop-blur-sm shadow-sm dark:shadow-none">
@@ -1217,7 +1818,8 @@ export function UserSettingsPrompt({
                         onCancel={() => setWorkspaceToDelete(null)}
                     />
                 </>
-            )}
-        </AnimatePresence>
+            )
+            }
+        </AnimatePresence >
     )
 }

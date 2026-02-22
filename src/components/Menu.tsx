@@ -20,7 +20,8 @@ import {
   Monitor,
   LayoutTemplate,
   LogOut,
-  User
+  User,
+  MessageSquare
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Kbd, KbdGroup } from '@/components/ui/kbd'
@@ -63,6 +64,7 @@ interface MenuProps {
   onLayoutEditToggle?: () => void
   onDragPreview?: (pos: MenuPosition | null) => void
   onFindCanvas?: () => void
+  onOpenChat?: () => void
   elementCount?: number
   onWorkspaces?: () => void
   onRealTimeColab?: (roomId?: string, isCreating?: boolean) => void
@@ -97,6 +99,7 @@ export function Menu({
   onLayoutEditToggle,
   onDragPreview,
   onFindCanvas,
+  onOpenChat,
   elementCount = 0,
   onWorkspaces,
   onRealTimeColab,
@@ -216,6 +219,7 @@ export function Menu({
         { label: 'Real-time collaboration...', icon: Users, onClick: () => { setIsOpen(false); setShowRealTimeColab(true) } },
         { label: 'Command Palette', icon: Zap, shortcut: 'Ctrl+/', highlight: true, onClick: () => { setIsOpen(false); setShowCommandPalette(true) } },
         { label: 'Find on canvas', icon: Search, shortcut: 'Ctrl+F', onClick: () => { setIsOpen(false); onFindCanvas?.() } },
+        { label: 'Session Chat', icon: MessageSquare, onClick: () => { setIsOpen(false); onOpenChat?.() } },
         { label: 'Workspaces', icon: FolderOpen, onClick: () => { setIsOpen(false); onWorkspaces?.() } },
         { label: 'Help', icon: HelpCircle, shortcut: '?', onClick: () => { setIsOpen(false); setShowHelp(true) } },
         { label: 'Edit Interface Layout', icon: LayoutTemplate, onClick: () => { setIsOpen(false); onLayoutEditToggle?.() } },

@@ -652,7 +652,7 @@ class NullpassClient {
       premiumTierBoard: boardService?.tier || 'free',
       twoFactorEnabled: nullpassUser.twoFactorEnabled,
       isNullBoardTeam: boardService?.accessFlags?.isNullBoardTeam || false,
-      nullBoardTeamRole: boardService?.accessFlags?.nullBoardTeamRole || 'member',
+      nullBoardTeamRole: boardService?.accessFlags?.nullDropTeamRole || boardService?.accessFlags?.nullBoardTeamRole || 'member',
       polarCustomerId: boardService?.polarCustomerId,
       polarSubscriptionId: boardService?.polarSubscriptionId,
       polarSubscriptionStatus: boardService?.polarSubscriptionStatus,

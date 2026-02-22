@@ -95,9 +95,22 @@ export function useWorkspaces() {
         }
     }, [workspaces])
 
-    const saveWorkspaceData = useCallback((id: string, elements: CanvasElement[]) => {
+    const saveWorkspaceData = useCallback((id: string, elements: CanvasElement[], camera?: { x: number; y: number; scale: number }) => {
+
+        const existingData = localStorage.getItem(STORAGE_PREFIX_DATA + id)
+
+        let existingCamera = undefined
+
+        if (existingData) {
+            try {
+                const parsed = JSON.parse(existingData)
+                existingCamera = parsed.camera
+            } catch (e) { }
+        }
+
         localStorage.setItem(STORAGE_PREFIX_DATA + id, JSON.stringify({
             elements,
+            camera: camera || existingCamera,
             timestamp: Date.now()
         }))
 
@@ -109,18 +122,23 @@ export function useWorkspaces() {
         })
     }, [])
 
-    const loadWorkspaceData = useCallback((id: string): CanvasElement[] => {
+    const loadWorkspaceData = useCallback((id: string): { elements: CanvasElement[]; camera?: { x: number; y: number; scale: number } } => {
+
         const data = localStorage.getItem(STORAGE_PREFIX_DATA + id)
+
         if (data) {
             try {
                 const parsed = JSON.parse(data)
-                return parsed.elements || []
+                return {
+                    elements: parsed.elements || [],
+                    camera: parsed.camera
+                }
             } catch (e) {
                 console.error('Failed to load workspace data', e)
-                return []
+                return { elements: [] }
             }
         }
-        return []
+        return { elements: [] }
     }, [])
 
     return {

@@ -34,7 +34,7 @@ import { getCursor } from './canvas/utils/cursor'
 import { getSelectedElementType, getSelectedElementOptions, updateSelectedElements } from './canvas/utils/elementOptions'
 import { handleUndo, handleRedo } from './canvas/utils/history'
 import { saveAsset } from '@/lib/assetStore'
-import { handleSaveAs, handleExportImage, handleAdvancedExport } from './canvas/utils/export'
+import { handleSaveAs, handleAdvancedExport } from './canvas/utils/export'
 import { handleOpen } from './canvas/utils/import'
 import { generateTestWorkspace } from './canvas/utils/testWorkspace'
 import { FindOnCanvas } from './sidebar/FindOnCanvas'
@@ -48,7 +48,7 @@ import { StickyNoteEditor } from './canvas/stickyNoteEditor'
 import { useCollaboration } from '@/hooks/useCollaboration'
 import { RightClickMenu } from './rightClickMenu'
 import { WorkspaceClearPrompt } from './prompts/workspaceClear'
-import { ExportImagePrompt, type ExportOptions } from './prompts/exportImage'
+import { ExportImagePrompt } from './prompts/exportImage'
 import { useSearchParams } from 'next/navigation'
 import { useAuth } from '@/hooks/useAuth'
 
@@ -103,12 +103,10 @@ export function Canvas() {
   }, [])
 
   const collabUser = useMemo(() => ({
-    name: authUser?.name
-      ? sanitizeNickname(authUser.name)
-      : 'User-' + Math.floor(Math.random() * 1000),
+    name: authUser?.name || 'User-' + Math.floor(Math.random() * 1000),
     color: '#' + Math.floor(Math.random() * 16777215).toString(16),
     isAnonymous: !authUser
-  }), [authUser, sanitizeNickname])
+  }), [authUser])
 
   const {
     status: connectionStatus,
@@ -123,7 +121,11 @@ export function Canvas() {
     connectionFailed,
     clearConnectionFailed,
     roomSettings,
-    updateRoomSettings
+    updateRoomSettings,
+    chatMessages,
+    sendChatMessage,
+    deleteChatMessage,
+    clientId
   } = useCollaboration(roomId, localElements, setLocalElements, collabUser, isRoomCreator)
 
   useEffect(() => {
@@ -192,6 +194,7 @@ export function Canvas() {
   const [selectedTool, setSelectedTool] = useState<ToolType>('pan')
   const [isLocked, setIsLocked] = useState(false)
   const [isFindSidebarOpen, setIsFindSidebarOpen] = useState(false)
+  const [findSidebarTab, setFindSidebarTab] = useState<'search' | 'library' | 'chat' | 'presentation'>('search')
 
   const [selectedIds, setSelectedIds] = useState<string[]>([])
   const [isDrawing, setIsDrawing] = useState(false)
@@ -468,17 +471,43 @@ export function Canvas() {
   useEffect(() => {
     if (isWorkspacesLoaded) {
       isWorkspaceLoadingRef.current = true
-      const data = loadWorkspaceData(activeWorkspaceId)
-      setElements(data)
+      const { elements: loadedElements, camera } = loadWorkspaceData(activeWorkspaceId)
+      setElements(loadedElements)
       historyRef.current = []
       redoRef.current = []
       setCanUndo(false)
       setCanRedo(false)
+
+      if (camera && transformRef.current) {
+
+        setTimeout(() => {
+          if (transformRef.current) {
+            transformRef.current.setTransform(camera.x, camera.y, camera.scale)
+          }
+        }, 100)
+      }
+
       setTimeout(() => {
         isWorkspaceLoadingRef.current = false
       }, 50)
     }
   }, [activeWorkspaceId, isWorkspacesLoaded, loadWorkspaceData])
+
+  useEffect(() => {
+
+    if (isWorkspacesLoaded) {
+
+      const currentWorkspace = workspaces.find(w => w.id === activeWorkspaceId)
+
+      if (currentWorkspace) {
+
+        document.title = `/${currentWorkspace.name} - Null Board, collaboration platform.`
+      } else {
+
+        document.title = 'Null Board - The board collaboration platform'
+      }
+    }
+  }, [activeWorkspaceId, workspaces, isWorkspacesLoaded])
 
   useEffect(() => {
     const shouldSave = isWorkspacesLoaded && !isWorkspaceLoadingRef.current && (!roomId || isHost)
@@ -487,6 +516,22 @@ export function Canvas() {
       saveWorkspaceData(activeWorkspaceId, elements)
     }
   }, [elements, activeWorkspaceId, isWorkspacesLoaded, saveWorkspaceData, roomId, isHost])
+
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      if (isWorkspacesLoaded && transformRef.current?.instance?.transformState) {
+        const state = transformRef.current.instance.transformState
+        saveWorkspaceData(activeWorkspaceId, elements, {
+          x: state.positionX,
+          y: state.positionY,
+          scale: state.scale
+        })
+      }
+    }
+
+    window.addEventListener('beforeunload', handleBeforeUnload)
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload)
+  }, [isWorkspacesLoaded, activeWorkspaceId, elements, saveWorkspaceData])
 
   const [rectOptions, setRectOptions] = useState<RectangleOptions>({
     strokeColor: '#000000',
@@ -648,6 +693,7 @@ export function Canvas() {
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'f') {
         e.preventDefault()
+        setFindSidebarTab('search')
         setIsFindSidebarOpen(prev => !prev)
       }
     }
@@ -1456,7 +1502,14 @@ export function Canvas() {
           isLayoutEditing={isLayoutEditing}
           onLayoutEditToggle={() => setIsLayoutEditing(!isLayoutEditing)}
           onDragPreview={(pos) => setDragSnapPreview(pos ? { type: 'menu', position: pos } : null)}
-          onFindCanvas={() => setIsFindSidebarOpen(true)}
+          onFindCanvas={() => {
+            setFindSidebarTab('search')
+            setIsFindSidebarOpen(true)
+          }}
+          onOpenChat={() => {
+            setFindSidebarTab('chat')
+            setIsFindSidebarOpen(true)
+          }}
           onWorkspaces={() => setIsWorkspacesSidebarOpen(true)}
           onRealTimeColab={(id) => {
             if (id) {
@@ -2340,8 +2393,8 @@ export function Canvas() {
             stopSession && stopSession()
           } else {
             leaveRoom && leaveRoom()
-            const data = loadWorkspaceData(activeWorkspaceId)
-            setElements(data)
+            const { elements: loadedElements } = loadWorkspaceData(activeWorkspaceId)
+            setElements(loadedElements)
             historyRef.current = []
             redoRef.current = []
           }
@@ -2355,7 +2408,14 @@ export function Canvas() {
       <FindOnCanvas
         isOpen={isFindSidebarOpen}
         onClose={() => setIsFindSidebarOpen(false)}
+        initialTab={findSidebarTab}
         elements={elements}
+        chatMessages={chatMessages}
+        onSendMessage={sendChatMessage}
+        onDeleteMessage={deleteChatMessage}
+        connectionStatus={connectionStatus}
+        currentClientId={clientId}
+        isHost={isHost}
         onSelectElement={(id) => {
           setSelectedIds([id])
           const el = elements.find(e => e.id === id)
@@ -2590,9 +2650,8 @@ export function Canvas() {
           const url = new URL(window.location.href)
           url.searchParams.delete('room')
           window.history.pushState({}, '', url.toString())
-
-          const data = loadWorkspaceData(activeWorkspaceId)
-          setElements(data)
+          const { elements: loadedElements } = loadWorkspaceData(activeWorkspaceId)
+          setElements(loadedElements)
           historyRef.current = []
           redoRef.current = []
         }}
@@ -2612,6 +2671,11 @@ export function Canvas() {
           }}
           onClearWorkspace={() => {
             setIsClearWorkspaceOpen(true)
+            handleCloseContextMenu()
+          }}
+          onOpenChat={() => {
+            setFindSidebarTab('chat')
+            setIsFindSidebarOpen(true)
             handleCloseContextMenu()
           }}
         />

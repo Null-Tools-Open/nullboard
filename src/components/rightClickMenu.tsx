@@ -2,7 +2,7 @@
 
 import React, { useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { ClipboardPaste, Maximize, Minimize, Trash2, CheckSquare, Download } from 'lucide-react'
+import { ClipboardPaste, Maximize, Minimize, Trash2, CheckSquare, Download, MessageSquare } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Kbd, KbdGroup } from '@/components/ui/kbd'
 
@@ -16,6 +16,7 @@ interface RightClickMenuProps {
     onZoomOut: () => void
     onExportImage: () => void
     onClearWorkspace: () => void
+    onOpenChat: () => void
     canPaste?: boolean
 }
 
@@ -29,6 +30,7 @@ export function RightClickMenu({
     onZoomOut,
     onExportImage,
     onClearWorkspace,
+    onOpenChat,
     canPaste = true
 }: RightClickMenuProps) {
     const menuRef = useRef<HTMLDivElement>(null)
@@ -102,6 +104,14 @@ export function RightClickMenu({
                     label="Select All"
                     shortcut="Ctrl+A"
                     onClick={onSelectAll}
+                />
+
+                <div className="my-1 border-t border-gray-100 dark:border-zinc-700/50" />
+
+                <MenuItem
+                    icon={MessageSquare}
+                    label="Session Chat"
+                    onClick={onOpenChat}
                 />
 
                 <div className="my-1 border-t border-gray-100 dark:border-zinc-700/50" />

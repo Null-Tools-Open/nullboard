@@ -10,37 +10,37 @@ export default function PrivacyPolicy() {
         <rect x="8%" y="10%" width="100" height="70" stroke="#a855f7" strokeWidth="2" fill="none" transform="rotate(12 13% 15%)" opacity="0.4" />
         <circle cx="15%" cy="18%" r="22" stroke="#a855f7" strokeWidth="2" fill="none" opacity="0.5" />
         <path d="M 10% 25% L 18% 22% L 14% 30% Z" stroke="#a855f7" strokeWidth="2" fill="none" opacity="0.4" />
-        
+
         <rect x="82%" y="12%" width="90" height="65" stroke="#3b82f6" strokeWidth="2" fill="none" transform="rotate(-18 86.5% 17.5%)" opacity="0.4" />
         <circle cx="88%" cy="20%" r="18" stroke="#3b82f6" strokeWidth="2" fill="none" strokeDasharray="3,3" opacity="0.5" />
         <path d="M 85% 28% L 91% 25% L 88% 32%" stroke="#3b82f6" strokeWidth="2" fill="none" opacity="0.4" />
-        
+
         <rect x="42%" y="8%" width="75" height="55" stroke="#ec4899" strokeWidth="2" fill="none" transform="rotate(8 45.75% 11.75%)" opacity="0.4" />
         <circle cx="48%" cy="15%" r="16" stroke="#ec4899" strokeWidth="2" fill="none" opacity="0.5" />
-        
+
         <path d="M 18% 38% L 23% 35% L 28% 38% L 33% 35%" stroke="#eab308" strokeWidth="2" fill="none" strokeLinecap="round" opacity="0.5" />
         <rect x="20%" y="41%" width="55" height="38" stroke="#eab308" strokeWidth="2" fill="none" transform="rotate(-3 23.75% 43%)" opacity="0.4" />
-        
+
         <circle cx="72%" cy="42%" r="20" stroke="#10b981" strokeWidth="2" fill="none" strokeDasharray="4,4" opacity="0.5" />
         <rect x="69%" y="47%" width="48" height="33" stroke="#10b981" strokeWidth="2" fill="none" transform="rotate(10 71% 48.5%)" opacity="0.4" />
-        
+
         <path d="M 12% 58% Q 17% 53%, 22% 58% T 32% 58%" stroke="#f97316" strokeWidth="2" fill="none" opacity="0.5" />
         <rect x="14%" y="61%" width="65" height="42" stroke="#f97316" strokeWidth="2" fill="none" transform="rotate(-6 17.25% 62%)" opacity="0.4" />
-        
+
         <circle cx="58%" cy="68%" r="18" stroke="#ef4444" strokeWidth="2" fill="none" opacity="0.5" />
         <rect x="55%" y="73%" width="52" height="36" stroke="#ef4444" strokeWidth="2" fill="none" transform="rotate(13 57.5% 74.5%)" opacity="0.4" />
-        
+
         <path d="M 78% 78% L 83% 75% L 88% 78% L 86% 83%" stroke="#14b8a6" strokeWidth="2" fill="none" opacity="0.5" />
         <rect x="80%" y="81%" width="48" height="33" stroke="#14b8a6" strokeWidth="2" fill="none" transform="rotate(-8 82.5% 82.5%)" opacity="0.4" />
-        
+
         <circle cx="33%" cy="83%" r="16" stroke="#6366f1" strokeWidth="2" fill="none" strokeDasharray="3,3" opacity="0.5" />
         <rect x="30%" y="88%" width="58" height="38" stroke="#6366f1" strokeWidth="2" fill="none" transform="rotate(6 33% 89%)" opacity="0.4" />
-        
+
         <path d="M 13% 33% L 16% 31% M 16% 33% L 13% 31%" stroke="#a855f7" strokeWidth="2" strokeLinecap="round" opacity="0.4" />
         <path d="M 68% 28% L 71% 26% M 71% 28% L 68% 26%" stroke="#3b82f6" strokeWidth="2" strokeLinecap="round" opacity="0.4" />
         <path d="M 38% 52% L 41% 50% M 41% 52% L 38% 50%" stroke="#ec4899" strokeWidth="2" strokeLinecap="round" opacity="0.4" />
         <path d="M 63% 88% L 66% 86% M 66% 88% L 63% 86%" stroke="#10b981" strokeWidth="2" strokeLinecap="round" opacity="0.4" />
-        
+
         <path d="M 23% 48% L 38% 48%" stroke="#eab308" strokeWidth="1.5" strokeDasharray="2,2" opacity="0.3" />
         <path d="M 48% 63% L 63% 63%" stroke="#f97316" strokeWidth="1.5" strokeDasharray="2,2" opacity="0.3" />
         <path d="M 28% 93% L 43% 93%" stroke="#6366f1" strokeWidth="1.5" strokeDasharray="2,2" opacity="0.3" />
@@ -74,7 +74,7 @@ export default function PrivacyPolicy() {
                 </svg>
                 <p className="text-white/40 mt-6">
                   Last Updated: 2025-11-23<br />
-                  Effective Date: 2025-11-23
+                  Effective Date: 2026-01-26
                 </p>
               </div>
 
@@ -105,7 +105,7 @@ export default function PrivacyPolicy() {
                   <p className="mb-4">
                     We collect personal information about you in a number of different ways. When you use our Services, including our websites and Null Board, we collect personal information that you provide to us, which may include the following categories of personal information depending on how you use our Services and communicate with us:
                   </p>
-                  
+
                   <h3 className="text-xl font-bold text-white mb-3 mt-6 tracking-wide">Personal Information From Users Of Null Board:</h3>
                   <p className="mb-4">When you use our Null Board product, we collect the following personal information from you:</p>
                   <ul className="list-disc list-inside space-y-2 ml-4 mb-4 text-white/60">
@@ -363,8 +363,10 @@ export default function PrivacyPolicy() {
                   </p>
                   <p className="ml-4 p-4 bg-white/5 border border-white/10 rounded-xl">
                     Null Tools<br />
-                    Email: <a href="mailto:legal@nulltools.xyz" className="text-white hover:text-white/80 transition-colors underline">legal@nulltools.xyz</a><br />
-                    Email: <a href="mailto:contact@nulltools.xyz" className="text-white hover:text-white/80 transition-colors underline">contact@nulltools.xyz</a>
+                    Legal: <a href="mailto:legal@nulltools.xyz" className="text-white hover:text-white/80 transition-colors underline">legal@nulltools.xyz</a><br />
+                    Contact: <a href="mailto:contact@nulltools.xyz" className="text-white hover:text-white/80 transition-colors underline">contact@nulltools.xyz</a><br />
+                    Discord: <a href="https://discord.com/invite/7WMZh7jjEB" className="text-white hover:text-white/80 transition-colors underline">Click To Join</a><br />
+                    Phone Number: <a href="tel:+48" className="text-white hover:text-white/80 transition-colors underline">+48 </a><br />
                   </p>
                   <p className="mt-4">
                     If you have questions about this Privacy Policy or our privacy practices, please contact us using the email addresses above.

@@ -79,7 +79,6 @@ export default function LicensePage() {
         'OCR (Text recognition)',
         'Vectorization (Images)',
         'One time payment',
-        'Cancel anytime'
       ],
       popular: false
     }
@@ -104,7 +103,6 @@ export default function LicensePage() {
 
             <h1 className="text-5xl md:text-6xl font-bold text-white mb-6 relative inline-block">
               Choose your plan
-              <span className="absolute -bottom-2 left-0 w-full h-1 bg-white/20 rounded-full blur-[1px]"></span>
             </h1>
             <p className="text-white/40 text-lg max-w-2xl mx-auto font-light">
               Simple pricing for everyone. No hidden fees.
@@ -124,67 +122,27 @@ export default function LicensePage() {
                 )}
               >
                 <div className={cn(
-                  "absolute inset-0 transition-opacity duration-300",
-                  plan.popular ? "text-white/30" : "text-white/10 group-hover:text-white/20"
-                )}>
-                  <svg className="w-full h-full overflow-visible" preserveAspectRatio="none">
-                    <defs>
-                      <filter id={`doodle-filter-${index}`} x="-20%" y="-20%" width="140%" height="140%">
-                        <feTurbulence type="fractalNoise" baseFrequency="0.02" numOctaves="2" result="noise" />
-                        <feDisplacementMap in="SourceGraphic" in2="noise" scale="3" />
-                      </filter>
-                    </defs>
-                    <rect
-                      x="0"
-                      y="0"
-                      width="100%"
-                      height="100%"
-                      rx="12"
-                      ry="12"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="1.5"
-                      vectorEffect="non-scaling-stroke"
-                      filter={`url(#doodle-filter-${index})`}
-                    />
-                    <rect
-                      x="4"
-                      y="4"
-                      width="calc(100% - 8px)"
-                      height="calc(100% - 8px)"
-                      rx="8"
-                      ry="8"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="1"
-                      strokeDasharray="4 6"
-                      vectorEffect="non-scaling-stroke"
-                      filter={`url(#doodle-filter-${index})`}
-                      className="opacity-20"
-                    />
-                  </svg>
-                </div>
+                  "absolute inset-0 rounded-xl transition-all duration-300",
+                  plan.popular
+                    ? "border-[1.5px] border-white/30 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.05)]"
+                    : "border border-white/10 group-hover:border-white/20"
+                )}
+                  style={{
+                    borderRadius: '12px',
+                  }}
+                />
+                <div className={cn(
+                  "absolute inset-1 rounded-lg border border-dashed opacity-20 transition-opacity duration-300",
+                  plan.popular ? "border-white/30" : "border-white/10 group-hover:border-white/20"
+                )}
+                  style={{
+                    borderRadius: '8px',
+                  }}
+                />
 
                 {plan.popular && (
-                  <div className="absolute -top-5 left-1/2 -translate-x-1/2 z-20 w-32 h-10">
-                    <svg className="w-full h-full overflow-visible" preserveAspectRatio="none">
-                      <defs>
-                        <filter id={`badge-filter-${index}`} x="-20%" y="-20%" width="140%" height="140%">
-                          <feTurbulence type="fractalNoise" baseFrequency="0.02" numOctaves="2" result="noise" />
-                          <feDisplacementMap in="SourceGraphic" in2="noise" scale="3" />
-                        </filter>
-                      </defs>
-                      <path
-                        d="M2,5 Q 16,2 32,5 T 64,5 T 96,5 L 96,25 Q 80,28 64,25 T 32,25 T 2,25 Z"
-                        fill="#0a0a0a"
-                        stroke="rgba(59, 130, 246, 0.6)"
-                        strokeWidth="1.5"
-                        filter={`url(#badge-filter-${index})`}
-                        vectorEffect="non-scaling-stroke"
-                        transform="scale(1.2, 1.2) translate(-3, -2)"
-                      />
-                    </svg>
-                    <div className="absolute inset-0 flex items-center justify-center">
+                  <div className="absolute -top-4 left-1/2 -translate-x-1/2 z-20">
+                    <div className="px-4 py-1.5 bg-[#0a0a0a] border border-blue-500/60 rounded-full">
                       <span className="text-blue-400 text-xs font-bold uppercase tracking-widest font-mono">
                         Popular
                       </span>
@@ -266,7 +224,7 @@ export default function LicensePage() {
               </svg>
               <h3 className="text-lg font-bold text-white/80 mb-2 font-caveat text-xl">Just so you know...</h3>
               <p className="text-white/40 text-sm leading-relaxed">
-                All licenses include full access to Null Board features. You can cancel your subscription at any time.
+                All licenses include full access to Null Board features. You can revoke your license at any time.
                 <br />
                 Read our <Link href="/terms" className="text-white/60 hover:text-white underline decoration-white/20 underline-offset-4">Terms</Link> and <Link href="/privacy" className="text-white/60 hover:text-white underline decoration-white/20 underline-offset-4">Privacy Policy</Link>.
               </p>

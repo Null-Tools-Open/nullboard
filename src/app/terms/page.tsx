@@ -13,32 +13,32 @@ export default function TermsOfService() {
         <rect x="5%" y="8%" width="120" height="80" stroke="#a855f7" strokeWidth="2" fill="none" transform="rotate(15 11% 12%)" opacity="0.4" />
         <circle cx="12%" cy="15%" r="25" stroke="#a855f7" strokeWidth="2" fill="none" opacity="0.5" />
         <path d="M 8% 20% L 15% 18% L 12% 25% Z" stroke="#a855f7" strokeWidth="2" fill="none" opacity="0.4" />
-        
+
         <rect x="85%" y="10%" width="100" height="70" stroke="#3b82f6" strokeWidth="2" fill="none" transform="rotate(-20 90% 15%)" opacity="0.4" />
         <circle cx="90%" cy="18%" r="20" stroke="#3b82f6" strokeWidth="2" fill="none" strokeDasharray="3,3" opacity="0.5" />
         <path d="M 88% 25% L 92% 22% L 90% 28%" stroke="#3b82f6" strokeWidth="2" fill="none" opacity="0.4" />
-        
+
         <rect x="45%" y="5%" width="80" height="60" stroke="#ec4899" strokeWidth="2" fill="none" transform="rotate(10 49% 8%)" opacity="0.4" />
         <circle cx="50%" cy="12%" r="18" stroke="#ec4899" strokeWidth="2" fill="none" opacity="0.5" />
-        
+
         <path d="M 20% 35% L 25% 32% L 30% 35% L 35% 32%" stroke="#eab308" strokeWidth="2" fill="none" strokeLinecap="round" opacity="0.5" />
         <rect x="22%" y="38%" width="60" height="40" stroke="#eab308" strokeWidth="2" fill="none" transform="rotate(-5 25% 40%)" opacity="0.4" />
-        
+
         <circle cx="75%" cy="40%" r="22" stroke="#10b981" strokeWidth="2" fill="none" strokeDasharray="4,4" opacity="0.5" />
         <rect x="72%" y="45%" width="50" height="35" stroke="#10b981" strokeWidth="2" fill="none" transform="rotate(12 74.5% 47.5%)" opacity="0.4" />
-        
+
         <path d="M 10% 55% Q 15% 50%, 20% 55% T 30% 55%" stroke="#f97316" strokeWidth="2" fill="none" opacity="0.5" />
         <rect x="12%" y="58%" width="70" height="45" stroke="#f97316" strokeWidth="2" fill="none" transform="rotate(-8 15.5% 60.5%)" opacity="0.4" />
-        
+
         <circle cx="60%" cy="65%" r="20" stroke="#ef4444" strokeWidth="2" fill="none" opacity="0.5" />
         <rect x="57%" y="70%" width="55" height="38" stroke="#ef4444" strokeWidth="2" fill="none" transform="rotate(15 59.5% 72%)" opacity="0.4" />
-        
+
         <path d="M 80% 75% L 85% 72% L 90% 75% L 88% 80%" stroke="#14b8a6" strokeWidth="2" fill="none" opacity="0.5" />
         <rect x="82%" y="78%" width="50" height="35" stroke="#14b8a6" strokeWidth="2" fill="none" transform="rotate(-10 84.5% 79.5%)" opacity="0.4" />
-        
+
         <circle cx="35%" cy="80%" r="18" stroke="#6366f1" strokeWidth="2" fill="none" strokeDasharray="3,3" opacity="0.5" />
         <rect x="32%" y="85%" width="60" height="40" stroke="#6366f1" strokeWidth="2" fill="none" transform="rotate(8 35% 87%)" opacity="0.4" />
-        
+
         <path d="M 15% 30% L 18% 28% M 18% 30% L 15% 28%" stroke="#a855f7" strokeWidth="2" strokeLinecap="round" opacity="0.4" />
         <path d="M 70% 25% L 73% 23% M 73% 25% L 70% 23%" stroke="#3b82f6" strokeWidth="2" strokeLinecap="round" opacity="0.4" />
         <path d="M 40% 50% L 43% 48% M 43% 50% L 40% 48%" stroke="#ec4899" strokeWidth="2" strokeLinecap="round" opacity="0.4" />
@@ -76,7 +76,7 @@ export default function TermsOfService() {
                   />
                 </svg>
                 <p className="text-white/40 mt-6">
-                  Last Updated: 2025-11-23
+                  Last Updated: 2026-01-26
                 </p>
               </div>
 
@@ -218,7 +218,7 @@ export default function TermsOfService() {
                   <p className="mb-4">
                     Your privacy is important to us. Our collection, use, and protection of your personal information and User Content are governed by our Privacy Policy, available at{' '}
                     <Link href="/privacy" className="text-white hover:text-white/80 transition-colors underline">
-                      /privacy
+                      our privacy policy
                     </Link>
                     . By using our Services, you consent to the practices described in our Privacy Policy.
                   </p>
@@ -411,9 +411,11 @@ export default function TermsOfService() {
                     If you have questions, concerns, or complaints about these Terms or our Services, or if you need to submit a legal notice or claim, please contact us at:
                   </p>
                   <p className="ml-4 p-4 bg-white/5 border border-white/10 rounded-xl">
-                    Null Tools<br />  
-                    Email: <a href="mailto:legal@nulltools.xyz" className="text-white hover:text-white/80 transition-colors underline">legal@nulltools.xyz</a><br />
-                    Email: <a href="mailto:contact@nulltools.xyz" className="text-white hover:text-white/80 transition-colors underline">contact@nulltools.xyz</a>
+                    Null Tools<br />
+                    Legal: <a href="mailto:legal@nulltools.xyz" className="text-white hover:text-white/80 transition-colors underline">legal@nulltools.xyz</a><br />
+                    Contact: <a href="mailto:contact@nulltools.xyz" className="text-white hover:text-white/80 transition-colors underline">contact@nulltools.xyz</a><br />
+                    Discord: <a href="https://discord.com/invite/7WMZh7jjEB" className="text-white hover:text-white/80 transition-colors underline">Click To Join</a><br />
+                    Phone Number: <a href="tel:+48" className="text-white hover:text-white/80 transition-colors underline">+48 </a><br />
                   </p>
                   <p className="mt-4">
                     When contacting us, please provide a clear description of your question, concern, or complaint, and specify which aspects of our Services your inquiry relates to. This will help us respond to you more effectively.

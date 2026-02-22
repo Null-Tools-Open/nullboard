@@ -22,7 +22,7 @@ export function useCollaboration(
     roomId: string,
     initialElements: CanvasElement[],
     setElements: (elements: CanvasElement[]) => void,
-    user: { name: string; color: string; isAnonymous?: boolean },
+    user: { name: string, color: string, isAnonymous?: boolean },
     isRoomCreator: boolean = false
 ) {
     const [status, setStatus] = useState<'connecting' | 'connected' | 'disconnected'>('disconnected')
@@ -31,6 +31,7 @@ export function useCollaboration(
     const [sessionEnded, setSessionEnded] = useState(false)
     const [connectionFailed, setConnectionFailed] = useState(false)
     const [roomSettings, setRoomSettings] = useState({ guestEditAccess: true })
+    const [chatMessages, setChatMessages] = useState<any[]>([])
 
     const ydocRef = useRef<Y.Doc>(new Y.Doc())
     const wsRef = useRef<WebSocket | null>(null)
@@ -100,10 +101,75 @@ export function useCollaboration(
         return newId
     })
 
+    const chatTimestampsRef = useRef<number[]>([])
+
+    const sendChatMessage = useCallback(async (content: string, media?: any) => {
+        if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) return
+
+        const now = Date.now()
+        chatTimestampsRef.current = chatTimestampsRef.current.filter(t => now - t < 60000)
+
+        const isRateLimited = chatTimestampsRef.current.length >= 30
+
+        if (!isRateLimited) {
+            chatTimestampsRef.current.push(now)
+        }
+
+        const safeContent = content.slice(0, 300)
+
+        const chatPayload: any = {
+            id: crypto.randomUUID(),
+            clientId,
+            name: user.name,
+            color: user.color,
+            content: safeContent,
+            timestamp: now,
+            deleted: false,
+            failed: isRateLimited
+        }
+
+        if (media) {
+            chatPayload.media = media
+        }
+
+        if (!isRateLimited) {
+            try {
+                const encrypted = await encryptData(chatPayload)
+                wsRef.current.send(JSON.stringify({
+                    type: 'chat',
+                    data: encrypted
+                }))
+            } catch (e) {
+                console.error('Failed to send chat message', e)
+            }
+        }
+
+        setChatMessages(prev => [...prev, chatPayload])
+    }, [clientId, user])
+
+    const deleteChatMessage = useCallback(async (messageId: string) => {
+        if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) return
+
+        try {
+            const encrypted = await encryptData({ messageId })
+            wsRef.current.send(JSON.stringify({
+                type: 'chat_delete',
+                data: encrypted
+            }))
+
+            setChatMessages(prev => prev.map(msg =>
+                msg.id === messageId ? { ...msg, deleted: true, content: 'This message was deleted.', avatar: undefined } : msg
+            ))
+        } catch (e) {
+            console.error('Failed to send chat delete command', e)
+        }
+    }, [])
+
     useEffect(() => {
         if (!roomId) {
             setIsHost(false)
             setSessionEnded(false)
+            setChatMessages([])
         } else {
             ydocRef.current = new Y.Doc()
         }
@@ -299,6 +365,33 @@ export function useCollaboration(
                         if (isHostRef.current) {
                             sendSnapshot()
                         }
+                    } else if (msg.type === 'chat') {
+                        try {
+                            const decryptedChat = await decryptData(msg.data)
+                            if (decryptedChat) {
+                                setChatMessages(prev => {
+                                    // Prevent duplicates by checking timestamp and clientId if needed
+                                    // But since we only have arrays without unique DB IDs right now, 
+                                    // we can just append and rely on the fact that clients won't resend messages they already have
+                                    return [...prev, decryptedChat]
+                                })
+                            }
+                        } catch (e) {
+                            console.error('Failed to decrypt chat message', e)
+                        }
+                    } else if (msg.type === 'chat_delete') {
+                        try {
+                            const decryptedDelete = await decryptData(msg.data)
+                            if (decryptedDelete && decryptedDelete.messageId) {
+                                setChatMessages(prev => prev.map(chat =>
+                                    chat.id === decryptedDelete.messageId
+                                        ? { ...chat, deleted: true, content: 'This message was deleted.', avatar: undefined }
+                                        : chat
+                                ))
+                            }
+                        } catch (e) {
+                            console.error('Failed to decrypt chat delete message', e)
+                        }
                     }
                 } catch (e) {
                     console.error('WS Message error', e)
@@ -362,17 +455,34 @@ export function useCollaboration(
             }
         }
 
-        const handleUpdate = async (update: Uint8Array) => {
-            if (wsRef.current?.readyState === WebSocket.OPEN) {
-                const updateArray = Array.from(update)
-                const encrypted = await encryptData(updateArray)
+        let updateTimer: NodeJS.Timeout | null = null;
+        let pendingUpdates: Uint8Array[] = [];
 
-                wsRef.current.send(JSON.stringify({
-                    type: 'update',
-                    data: encrypted
-                }))
-            } else {
-                console.warn('[COLLAB] Cannot send update - WS not open', wsRef.current?.readyState)
+        const handleUpdate = (update: Uint8Array) => {
+            pendingUpdates.push(update);
+
+            if (!updateTimer) {
+                updateTimer = setTimeout(async () => {
+                    if (wsRef.current?.readyState === WebSocket.OPEN && pendingUpdates.length > 0) {
+
+                        const mergedUpdate = Y.mergeUpdates(pendingUpdates);
+                        pendingUpdates = [];
+
+                        const updateArray = Array.from(mergedUpdate);
+                        try {
+                            const encrypted = await encryptData(updateArray);
+                            wsRef.current.send(JSON.stringify({
+                                type: 'update',
+                                data: encrypted
+                            }));
+                        } catch (e) {
+                            console.error('[COLLAB] Failed to encrypt/send merged update', e);
+                        }
+                    } else if (wsRef.current?.readyState !== WebSocket.OPEN) {
+                        pendingUpdates = [];
+                    }
+                    updateTimer = null;
+                }, 50);
             }
         }
 
@@ -387,6 +497,7 @@ export function useCollaboration(
         return () => {
             doc.off('update', handleUpdate)
             clearInterval(snapshotInterval)
+            if (updateTimer) clearTimeout(updateTimer)
         }
     }, [roomId, isHost])
 
@@ -509,6 +620,11 @@ export function useCollaboration(
         connectionFailed,
         clearConnectionFailed: () => setConnectionFailed(false),
         roomSettings,
-        updateRoomSettings
+        updateRoomSettings,
+        chatMessages,
+        sendChatMessage,
+        deleteChatMessage,
+        setChatMessages,
+        clientId
     }
 }
